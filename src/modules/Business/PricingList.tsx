@@ -1,0 +1,477 @@
+import React, { useEffect, useState } from 'react';
+import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Checkbox, Tabs, Badge } from 'antd';
+import { collection, query, getDocs, addDoc, orderBy, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { FlightRate, Customer } from '../../types';
+import { Plane, Plus, ChevronRight, Download, FileText, Settings, History, Trash2, Edit2, TrendingUp, DollarSign } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { PDFService } from '../../services/PDFService';
+import { useTranslation } from 'react-i18next';
+
+const { Text, Title } = Typography;
+
+export const PricingList: React.FC = () => {
+  const [rates, setRates] = useState<FlightRate[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingRate, setEditingRate] = useState<FlightRate | null>(null);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [selectedRateIds, setSelectedRateIds] = useState<React.Key[]>([]);
+  const [adjustmentType, setAdjustmentType] = useState<'percent' | 'fixed' | 'manual'>('percent');
+  const [adjustmentValue, setAdjustmentValue] = useState<number>(0);
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [pendingQuotation, setPendingQuotation] = useState<any>(null);
+  
+  const { profile } = useAuth();
+  const { t } = useTranslation();
+  const [form] = Form.useForm();
+  const [quoteForm] = Form.useForm();
+  const { message } = App.useApp();
+
+  const fetchRates = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'flight-rates'), orderBy('lastUpdated', 'desc'));
+      const snapshot = await getDocs(q);
+      setRates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FlightRate)));
+    } catch (e) {
+      message.error(t('common.error') + ': Failed to load rates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const q = collection(db, 'customers');
+      const snap = await getDocs(q);
+      setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchRates();
+    fetchCustomers();
+  }, []);
+
+  const handleCreateOrUpdate = async (values: any) => {
+    try {
+      const rateData = {
+        ...values,
+        lastUpdated: new Date().toISOString()
+      };
+
+      if (editingRate) {
+        await updateDoc(doc(db, 'flight-rates', editingRate.id), rateData);
+        message.success(t('common.success'));
+      } else {
+        await addDoc(collection(db, 'flight-rates'), rateData);
+        message.success(t('common.success'));
+      }
+      setModalOpen(false);
+      fetchRates();
+    } catch (e: any) {
+      message.error(t('common.error') + `: ${e.message}`);
+    }
+  };
+
+  const calculateFinalPrice = (rate: FlightRate) => {
+    const base = rate.baseFreight;
+    if (adjustmentType === 'manual') {
+      return customPrices[rate.id] || base;
+    }
+    if (adjustmentType === 'percent') return base * (1 + adjustmentValue / 100);
+    if (adjustmentType === 'fixed') return base + adjustmentValue;
+    return base;
+  };
+
+  const handleOpenPreview = async (values: any) => {
+    const selectedRates = rates.filter(r => selectedRateIds.includes(r.id));
+    if (selectedRates.length === 0) return;
+
+    const customer = customers.find(c => c.id === values.customerId);
+    const quotationNo = `QT-${Date.now().toString().slice(-6)}`;
+    
+    // Validate manual prices
+    if (adjustmentType === 'manual') {
+      const invalid = selectedRates.some(r => (customPrices[r.id] || 0) < r.baseFreight);
+      if (invalid) {
+         message.error(t('pricing.errors.lowPrice'));
+         return;
+      }
+    }
+
+    const quotationData = {
+      quotationNo,
+      customerId: values.customerId,
+      customerName: customer?.name || 'Walk-in Client',
+      recipientInfo: values.recipientInfo || '',
+      routes: selectedRates.map(r => ({
+        id: r.id,
+        origin: r.origin,
+        destination: r.destination,
+        carrier: r.carrier,
+        basePrice: r.baseFreight,
+        finalPrice: calculateFinalPrice(r),
+        adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
+                   adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual'
+      })),
+      currency: selectedRates[0].currency,
+      validUntil: values.validUntil,
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+      createdBy: profile?.uid,
+      userName: profile?.displayName || 'System User',
+      downloadCount: 1
+    };
+
+    setPendingQuotation(quotationData);
+    setQuoteModalOpen(false);
+    setPreviewModalOpen(true);
+  };
+
+  const handleFinalConfirm = async () => {
+    if (!pendingQuotation) return;
+    try {
+      const customer = customers.find(c => c.id === pendingQuotation.customerId);
+      
+      // Sanitizing for addDoc to prevent 'undefined' errors
+      const sanitizedQuote = { ...pendingQuotation };
+      Object.keys(sanitizedQuote).forEach(key => {
+        if (sanitizedQuote[key] === undefined) sanitizedQuote[key] = "";
+      });
+
+      // 1. Generate PDF
+      PDFService.generateProposal(sanitizedQuote, customer, profile);
+
+      // 2. Save Log & Quote
+      await addDoc(collection(db, 'quotations'), sanitizedQuote);
+      await addDoc(collection(db, 'quotation-history'), {
+        quotationNo: pendingQuotation.quotationNo,
+        customerId: pendingQuotation.customerId,
+        customerName: pendingQuotation.customerName,
+        recipientInfo: pendingQuotation.recipientInfo || '',
+        routes: pendingQuotation.routes.map((r: any) => `${r.origin}-${r.destination} @ ${r.finalPrice.toFixed(2)}`),
+        summary: `Total ${pendingQuotation.routes.length} routes, Amt: ${pendingQuotation.routes[0]?.finalPrice.toFixed(2)} ${pendingQuotation.currency}`,
+        userId: profile?.uid || "",
+        userName: profile?.displayName || "",
+        timestamp: new Date().toISOString()
+      });
+
+      message.success(t('common.success'));
+      setPreviewModalOpen(false);
+      setSelectedRateIds([]);
+      quoteForm.resetFields();
+      setCustomPrices({});
+    } catch (e: any) {
+      message.error(t('common.error') + ': ' + e.message);
+    }
+  };
+
+  const isAdmin = profile?.role === 'admin';
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Title level={2} className="mb-0">{t('pricing.title')}</Title>
+          <Text type="secondary">{t('pricing.subtitle')}</Text>
+        </div>
+        <Space size="middle">
+          {isAdmin && (
+            <Button 
+                type="primary" 
+                size="large" 
+                icon={<Plus size={18} />} 
+                onClick={() => {
+                    setEditingRate(null);
+                    form.resetFields();
+                    setModalOpen(true);
+                }}
+            >
+                {t('common.create')}
+            </Button>
+          )}
+          <Button 
+            type={selectedRateIds.length > 0 ? "primary" : "default"}
+            disabled={selectedRateIds.length === 0}
+            size="large"
+            icon={<FileText size={18} />}
+            onClick={() => setQuoteModalOpen(true)}
+            className={selectedRateIds.length > 0 ? "bg-orange-500 border-orange-500 hover:bg-orange-600" : ""}
+          >
+            {t('pricing.generateQuote')} ({selectedRateIds.length})
+          </Button>
+        </Space>
+      </div>
+
+      <Row gutter={16}>
+        <Col span={24}>
+           <Card className="shadow-sm border-slate-200">
+             <div className="mb-4 flex items-center justify-between">
+                <Space>
+                   <Text strong>{t('pricing.selectedRoutes')}:</Text>
+                   <Badge count={selectedRateIds.length} overflowCount={99} />
+                   {selectedRateIds.length > 0 && (
+                     <Button type="link" size="small" onClick={() => setSelectedRateIds([])}>{t('common.clear')}</Button>
+                   )}
+                </Space>
+                {selectedRateIds.length > 0 && (
+                    <div className="bg-slate-50 px-4 py-2 rounded-lg border border-dashed border-slate-300 flex items-center gap-4">
+                        <Text style={{ fontSize: 13 }}>{t('pricing.adjustmentLogic')}:</Text>
+                        <Select 
+                            size="small" 
+                            value={adjustmentType} 
+                            onChange={setAdjustmentType}
+                            options={[
+                                { label: 'Percentage (+%)', value: 'percent' },
+                                { label: 'Fixed Amount (+Value)', value: 'fixed' },
+                                { label: 'Manual Adjustment', value: 'manual' }
+                            ]}
+                            style={{ width: 160 }}
+                        />
+                        {adjustmentType !== 'manual' && (
+                            <InputNumber 
+                                size="small" 
+                                value={adjustmentValue} 
+                                onChange={v => setAdjustmentValue(v || 0)} 
+                                placeholder={adjustmentType === 'percent' ? 'Margin %' : 'Add Amt'}
+                                style={{ width: 80 }}
+                            />
+                        )}
+                    </div>
+                )}
+             </div>
+
+             <Table 
+                rowSelection={{
+                  selectedRowKeys: selectedRateIds,
+                  onChange: (keys) => setSelectedRateIds(keys)
+                }}
+                dataSource={rates} 
+                loading={loading} 
+                rowKey="id"
+                pagination={{ pageSize: 15 }}
+                className="custom-table"
+                columns={[
+                  { 
+                    title: t('booking.route'), 
+                    render: (_, r) => (
+                        <div className="flex items-center gap-2">
+                          <Tag color="blue" className="font-mono">{r.origin}</Tag>
+                          <ChevronRight size={14} className="text-slate-300" />
+                          <Tag color="indigo" className="font-mono">{r.destination}</Tag>
+                        </div>
+                    )
+                  },
+                  { 
+                    title: t('booking.carrier'), 
+                    render: (_, r) => (
+                      <div>
+                        <div className="flex items-center gap-2">
+                           <span className="font-bold text-slate-700">{r.carrier}</span>
+                           <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">{r.aircraftType}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium">{t('pricing.schedule')}: {r.schedule || '-'}</p>
+                      </div>
+                    )
+                  },
+                  { 
+                    title: t('pricing.baseFreight'), 
+                    dataIndex: 'baseFreight',
+                    render: (v, r) => <span className="font-mono font-bold text-slate-600">{r.currency} {v.toLocaleString()}</span>
+                  },
+                  { 
+                    title: t('pricing.finalPrice'), 
+                    render: (_, r) => (
+                        <div className="flex flex-col">
+                            {adjustmentType === 'manual' && selectedRateIds.includes(r.id) ? (
+                                <InputNumber 
+                                    size="small" 
+                                    min={r.baseFreight}
+                                    status={(customPrices[r.id] || 0) < r.baseFreight ? 'error' : ''}
+                                    value={customPrices[r.id] || r.baseFreight}
+                                    onChange={(v) => v && setCustomPrices(prev => ({ ...prev, [r.id]: v }))}
+                                    className="w-24"
+                                    formatter={value => `${r.currency} ${value}`}
+                                />
+                            ) : (
+                                <span className="text-sm font-bold text-blue-600">
+                                    {r.currency} {calculateFinalPrice(r).toFixed(2)}
+                                </span>
+                            )}
+                            <span className="text-[10px] text-slate-400">{t('pricing.allSurcharges')}</span>
+                        </div>
+                    )
+                  },
+                  {
+                    title: t('common.actions'),
+                    align: 'right',
+                    render: (_, r) => isAdmin ? (
+                        <Space>
+                            <Button size="small" type="text" icon={<Edit2 size={14} />} onClick={() => {
+                                setEditingRate(r);
+                                form.setFieldsValue(r);
+                                setModalOpen(true);
+                            }} />
+                            <Button size="small" type="text" danger icon={<Trash2 size={14} />} onClick={async () => {
+                                await deleteDoc(doc(db, 'flight-rates', r.id));
+                                fetchRates();
+                            }} />
+                        </Space>
+                    ) : null
+                  }
+                ]}
+             />
+           </Card>
+        </Col>
+      </Row>
+
+      {/* Admin Rate Modal */}
+      <Modal
+        title={editingRate ? t('common.edit') : t('common.create')}
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={() => form.submit()}
+        width={800}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate}>
+          <Title level={5} className="mb-4 border-b pb-2">{t('pricing.basicInfo')}</Title>
+          <Row gutter={16}>
+             <Col span={6}><Form.Item name="origin" label={t('booking.origin')} rules={[{ required: true }]}><Input placeholder="CAN" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="destination" label={t('booking.destination')} rules={[{ required: true }]}><Input placeholder="MIA" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="carrier" label={t('booking.carrier')} rules={[{ required: true }]}><Input placeholder="Atlas Air" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="region" label={t('pricing.region')} rules={[{ required: true }]}>
+                <Select options={[
+                  { label: 'AsiaPacific', value: 'AsiaPacific' },
+                  { label: 'Americas', value: 'Americas' },
+                  { label: 'Europe', value: 'Europe' },
+                  { label: 'MESA', value: 'MESA' }
+                ]} />
+             </Form.Item></Col>
+          </Row>
+
+          <Row gutter={16}>
+             <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')}><Input placeholder="5X123" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')}><Input placeholder="B747-8F" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')}><Input placeholder="1,3,5,7" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="currency" label={t('booking.currency')} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
+          </Row>
+
+          <Title level={5} className="mb-4 border-b pb-2 mt-4 text-blue-600">{t('pricing.costBreakdown')}</Title>
+          <Row gutter={16}>
+             <Col span={8}><Form.Item name="baseFreight" label={t('pricing.cost')} rules={[{ required: true }]}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={8}><Form.Item name="fuelSurcharge" label={t('pricing.fuel')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={8}><Form.Item name="securityScreening" label={t('pricing.security')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+          </Row>
+          <Row gutter={16}>
+             <Col span={8}><Form.Item name="terminalHandling" label={t('pricing.terminal')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={8}><Form.Item name="customsClearance" label={t('pricing.customs')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={8}><Form.Item name="otherCharges" label={t('pricing.other')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Quotation Generation Modal */}
+      <Modal
+        title={t('pricing.generateQuote')}
+        open={quoteModalOpen}
+        onCancel={() => setQuoteModalOpen(false)}
+        onOk={() => quoteForm.submit()}
+        width={600}
+      >
+        <Form form={quoteForm} layout="vertical" onFinish={handleOpenPreview}>
+          <Form.Item name="customerId" label={t('pricing.customerName')} rules={[{ required: true }]}>
+            <Select 
+                showSearch
+                placeholder={t('common.search')}
+                optionFilterProp="children"
+                options={customers.map(c => ({ label: `${c.code} - ${c.name}`, value: c.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="recipientInfo" label={t('pricing.recipient')}>
+             <Input.TextArea placeholder="Mr. Chen\nABC Logistics\n+86 139..." rows={3} />
+          </Form.Item>
+          <Form.Item name="validUntil" label={t('pricing.validUntil')} initialValue={new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]}>
+             <Input type="date" />
+          </Form.Item>
+          
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+             <Text strong className="text-orange-800">{t('pricing.summary')}</Text>
+             <div className="mt-2 text-sm text-orange-700">
+               <p>• {t('pricing.totalRoutes')}: {selectedRateIds.length}</p>
+               <p>• {t('pricing.margin')}: {adjustmentType === 'percent' ? adjustmentValue + '%' : adjustmentType === 'fixed' ? adjustmentValue + ' fixed' : 'Manual Overrides'}</p>
+               <p>• PDF will include your branding from Personal Center.</p>
+             </div>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Quotation Preview Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <TrendingUp size={20} className="text-blue-500" />
+            <span>{t('pricing.preview')}</span>
+          </div>
+        }
+        open={previewModalOpen}
+        onCancel={() => setPreviewModalOpen(false)}
+        onOk={handleFinalConfirm}
+        okText={t('pricing.confirmDownload')}
+        width={750}
+      >
+        {pendingQuotation && (
+          <div className="space-y-4">
+             <div className="flex justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <div>
+                   <Text type="secondary" className="block text-[10px] uppercase font-bold tracking-wider">Proposal For</Text>
+                   <Text strong className="text-lg">{pendingQuotation.customerName}</Text>
+                   <div className="mt-1">
+                      <Text type="secondary" className="block whitespace-pre-wrap">{pendingQuotation.recipientInfo}</Text>
+                   </div>
+                </div>
+                <div className="text-right">
+                   <Text type="secondary" className="block text-[10px] uppercase font-bold tracking-wider">Quote No</Text>
+                   <Text strong className="text-blue-600 font-mono italic">{pendingQuotation.quotationNo}</Text>
+                   <div className="mt-2 text-[11px] text-slate-500">
+                      {t('pricing.validUntil')}: {pendingQuotation.validUntil}
+                   </div>
+                </div>
+             </div>
+
+             <Table 
+                dataSource={pendingQuotation.routes}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                columns={[
+                  { title: t('booking.origin'), dataIndex: 'origin', className: 'font-mono' },
+                  { title: t('booking.destination'), dataIndex: 'destination', className: 'font-mono' },
+                  { title: t('booking.carrier'), dataIndex: 'carrier', className: 'font-bold' },
+                  { title: t('pricing.baseFreight'), dataIndex: 'basePrice', render: (v) => `${pendingQuotation.currency} ${v}` },
+                  { 
+                    title: t('pricing.finalPrice'), 
+                    render: (_, r: any) => (
+                      <Text strong className="text-blue-600">
+                        {pendingQuotation.currency} {r.finalPrice.toFixed(2)}
+                      </Text>
+                    )
+                  }
+                ]}
+             />
+             
+             <div className="bg-blue-50 p-3 rounded border border-blue-100 flex items-start gap-2">
+                <Settings size={16} className="text-blue-400 mt-1" />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Your company logo and contact details from "Personal Center" will be automatically embedded in the final PDF.
+                </Text>
+             </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};

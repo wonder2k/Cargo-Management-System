@@ -1,0 +1,127 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role management",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "business", "operation", "finance"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Client or agent records",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["direct", "agent"] },
+        "taxId": { "type": "string" },
+        "billingAddress": { "type": "string" },
+        "creditLimit": { "type": "number" },
+        "currentBalance": { "type": "number" },
+        "paymentTerms": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "frozen"] }
+      },
+      "required": ["code", "name", "type"]
+    },
+    "FlightRate": {
+      "title": "Flight Rate",
+      "description": "Carrier base prices",
+      "type": "object",
+      "properties": {
+        "carrier": { "type": "string" },
+        "flightNo": { "type": "string" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "cabinType": { "type": "string" },
+        "weightBreak": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "currency": { "type": "string" },
+        "validFrom": { "type": "string", "format": "date-time" },
+        "validTo": { "type": "string", "format": "date-time" }
+      },
+      "required": ["carrier", "origin", "destination", "basePrice"]
+    },
+    "Quotation": {
+      "title": "Quotation",
+      "description": "Sales quotes sent to customers",
+      "type": "object",
+      "properties": {
+        "quotationNo": { "type": "string" },
+        "customerId": { "type": "string" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "sellingPrice": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "sent", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["quotationNo", "customerId", "origin", "destination", "sellingPrice"]
+    },
+    "MAWB": {
+      "title": "Master Air Waybill",
+      "description": "Core shipment record",
+      "type": "object",
+      "properties": {
+        "internalMawbNo": { "type": "string" },
+        "airlineMawbNo": { "type": "string" },
+        "customerId": { "type": "string" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "flightNo": { "type": "string" },
+        "etd": { "type": "string", "format": "date-time" },
+        "eta": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "booked", "confirmed", "warehouse_in", "customs", "terminal_in", "departed", "arrived", "closed", "exception"] },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["internalMawbNo", "customerId", "origin", "destination"]
+    },
+    "MawbOperation": {
+      "title": "MAWB Operation Log",
+      "description": "Step-by-step history of a shipment",
+      "type": "object",
+      "properties": {
+        "mawbId": { "type": "string" },
+        "step": { "type": "string" },
+        "operatorId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "remark": { "type": "string" },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["mawbId", "step", "operatorId", "timestamp"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Financial billing record",
+      "type": "object",
+      "properties": {
+        "invoiceNo": { "type": "string" },
+        "customerId": { "type": "string" },
+        "mawbId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "issueDate": { "type": "string", "format": "date" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["draft", "issued", "partial", "paid"] }
+      },
+      "required": ["invoiceNo", "customerId", "mawbId", "amount"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "System users" },
+    "/customers/{customerId}": { "schema": "Customer", "description": "Customer/Agent database" },
+    "/flight-rates/{rateId}": { "schema": "FlightRate", "description": "Carrier pricing" },
+    "/quotations/{quoteId}": { "schema": "Quotation", "description": "Sent quotes" },
+    "/mawbs/{mawbId}": { "schema": "MAWB", "description": "Shipment main records" },
+    "/mawbs/{mawbId}/operations/{opId}": { "schema": "MawbOperation", "description": "Shipment logs" },
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Financial billing" }
+  }
+}

@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    // Role-based helpers
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isApproved() {
+      return isSignedIn() && (request.auth.token.email == 'wonder2k@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().status == 'approved'));
+    }
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'wonder2k@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin'));
+    }
+    function isBusiness() { return isApproved() && (getUserData().role == 'business' || isAdmin()); }
+    function isOperation() { return isApproved() && (getUserData().role == 'operation' || isAdmin()); }
+    function isFinance() { return isApproved() && (getUserData().role == 'finance' || isAdmin()); }
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && 
+                    incoming().status == (request.auth.token.email == 'wonder2k@gmail.com' ? 'approved' : 'pending') &&
+                    incoming().role == (request.auth.token.email == 'wonder2k@gmail.com' ? 'admin' : 'operation');
+      allow update: if isAdmin();
+    }
+
+    // Customer Records
+    match /customers/{customerId} {
+      function isValidCustomer(data) {
+        return data.code is string && data.code.size() > 0 && 
+               data.name is string && data.name.size() > 0 && 
+               data.type in ['direct', 'local_agent', 'overseas_agent'];
+      }
+      allow read: if isBusiness() || isFinance() || isOperation();
+      allow create: if isBusiness() && isValidCustomer(incoming());
+      allow update: if (isBusiness() || isFinance()) && isValidCustomer(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Flight Rates
+    match /flight-rates/{rateId} {
+      allow read: if isBusiness() || isOperation();
+      allow write: if isBusiness();
+    }
+
+    // Quotations
+    match /quotations/{quoteId} {
+      allow read: if isBusiness();
+      allow create: if isBusiness();
+      allow update: if isBusiness() && (existing().status != 'accepted' || isAdmin());
+    }
+
+    // MAWBs
+    match /mawbs/{mawbId} {
+      allow read: if isSignedIn();
+      allow create: if isBusiness() || isOperation() || isAdmin();
+      allow update: if isOperation() || isAdmin();
+    }
+
+    // Bookings
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn();
+      allow create: if isBusiness() || isAdmin();
+      allow update: if isBusiness() || isOperation() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Quotation History
+    match /quotation-history/{historyId} {
+      allow read: if isBusiness();
+      allow create: if isBusiness();
+    }
+
+    // MAWB Operations
+    match /mawbs/{mawbId}/operations/{opId} {
+      allow read: if isSignedIn();
+      allow write: if isOperation();
+    }
+
+    // Invoices
+    match /invoices/{invoiceId} {
+      allow read: if isFinance() || isBusiness();
+      allow write: if isFinance();
+    }
+
+    // Invoice History
+    match /invoice-history/{historyId} {
+      allow read: if isFinance();
+      allow create: if isFinance();
+    }
+  }
+}
