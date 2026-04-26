@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "name": "Cargo Management System (CMS) Deployment Kit",
+  "updated_at": "2026-04-26",
+  "changelog": [
+    "Initial deployment package generation for VPS (ARM architecture).",
+    "Configured multi-stage Docker build for optimized image size.",
+    "Integrated PostgreSQL 15 as the core database service.",
+    "Added automated health checks for the database container.",
+    "Bilingual support structures implemented in core logic (ready for localization)."
+  ],
+  "compatibility": {
+    "os": "Ubuntu 22.04 / 24.04 (ARM/x86)",
+    "docker": "20.10+",
+    "node": "v22+"
+  }
+}
