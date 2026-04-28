@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Button, Upload, App, Row, Col, Typography, Avatar, Divider, List, Space, Modal } from 'antd';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { db } from '../../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { User, Building2, Phone, Mail, Upload as UploadIcon, Shield, MapPin, Plus, Trash2 } from 'lucide-react';

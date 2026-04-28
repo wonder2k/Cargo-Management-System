@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Card, Typography, theme, Tabs, Form, Input, App, Divider } from 'antd';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import { LogIn, UserPlus, ShieldCheck, Mail, Lock, User as UserIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -8,6 +9,7 @@ import { motion } from 'motion/react';
 const { Title, Text } = Typography;
 
 export const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user, profile, loginWithGoogle, loginWithEmail, register, logout, loading } = useAuth();
   const { token } = theme.useToken();
   const { message } = App.useApp();

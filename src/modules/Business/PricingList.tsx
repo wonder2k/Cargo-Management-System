@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Checkbox, Tabs, Badge } from 'antd';
 import { collection, query, getDocs, addDoc, orderBy, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../../lib/firebase';
 import { FlightRate, Customer } from '../../types';
 import { Plane, Plus, ChevronRight, Download, FileText, Settings, History, Trash2, Edit2, TrendingUp, DollarSign } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -58,33 +58,76 @@ export const PricingList: React.FC = () => {
 
   const handleCreateOrUpdate = async (values: any) => {
     try {
+      const sanitized = cleanFirestoreData(values);
+
       const rateData = {
-        ...values,
+        ...sanitized,
         lastUpdated: new Date().toISOString()
       };
 
       if (editingRate) {
-        await updateDoc(doc(db, 'flight-rates', editingRate.id), rateData);
-        message.success(t('common.success'));
+        try {
+          await updateDoc(doc(db, 'flight-rates', editingRate.id), rateData);
+          message.success(t('common.success'));
+        } catch (e: any) {
+          handleFirestoreError(e, OperationType.WRITE, `flight-rates/${editingRate.id}`);
+        }
       } else {
-        await addDoc(collection(db, 'flight-rates'), rateData);
-        message.success(t('common.success'));
+        try {
+          await addDoc(collection(db, 'flight-rates'), rateData);
+          message.success(t('common.success'));
+        } catch (e: any) {
+          handleFirestoreError(e, OperationType.WRITE, 'flight-rates');
+        }
       }
       setModalOpen(false);
       fetchRates();
     } catch (e: any) {
-      message.error(t('common.error') + `: ${e.message}`);
+      console.error('Error saving rate:', e);
+      let displayError = e.message;
+      try {
+        if (e.message.startsWith('{')) {
+          const parsed = JSON.parse(e.message);
+          displayError = `Permission denied at ${parsed.path}`;
+        }
+      } catch(jsErr) {}
+      message.error(t('common.error') + `: ${displayError}`);
     }
   };
 
   const calculateFinalPrice = (rate: FlightRate) => {
-    const base = rate.baseFreight;
-    if (adjustmentType === 'manual') {
-      return customPrices[rate.id] || base;
-    }
-    if (adjustmentType === 'percent') return base * (1 + adjustmentValue / 100);
-    if (adjustmentType === 'fixed') return base + adjustmentValue;
-    return base;
+    const freight = rate.baseFreight;
+    const adjustedFreight = adjustmentType === 'manual' 
+      ? (customPrices[rate.id] || freight) 
+      : (adjustmentType === 'percent' ? freight * (1 + adjustmentValue / 100) : freight + adjustmentValue);
+    
+    // Add surcharges
+    const fuel = rate.fuelSurcharge || 0;
+    const security = rate.securityScreening || 0;
+    const terminal = rate.terminalHandling || 0;
+    
+    // For general display, we use 'formal' customs method as default or the legacy field
+    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
+    const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
+    
+    // Sum all per_kg miscFees
+    const miscPerKgAmount = (rate.miscFees || []).reduce((sum, item) => 
+      item.unit === 'per_kg' ? sum + item.amount : sum, 0);
+    
+    return adjustedFreight + fuel + security + terminal + customsAmount + miscPerKgAmount;
+  };
+
+  const getFlatFees = (rate: FlightRate) => {
+    let total = 0;
+    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
+    if (formalCustoms?.unit === 'per_shipment') total += formalCustoms.amount;
+    
+    // Sum all per_shipment miscFees
+    const miscFlatAmount = (rate.miscFees || []).reduce((sum, item) => 
+      item.unit === 'per_shipment' ? sum + item.amount : sum, 0);
+    
+    total += miscFlatAmount;
+    return total;
   };
 
   const handleOpenPreview = async (values: any) => {
@@ -116,7 +159,15 @@ export const PricingList: React.FC = () => {
         basePrice: r.baseFreight,
         finalPrice: calculateFinalPrice(r),
         adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
-                   adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual'
+                   adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual',
+        fuel: r.fuelSurcharge,
+        security: r.securityScreening,
+        terminal: r.terminalHandling,
+        customs: r.customsMethods?.['formal'] || r.customsClearance,
+        other: r.otherCharges,
+        customsMethods: r.customsMethods,
+        miscFees: r.miscFees,
+        flatFees: getFlatFees(r)
       })),
       currency: selectedRates[0].currency,
       validUntil: values.validUntil,
@@ -137,28 +188,35 @@ export const PricingList: React.FC = () => {
     try {
       const customer = customers.find(c => c.id === pendingQuotation.customerId);
       
-      // Sanitizing for addDoc to prevent 'undefined' errors
-      const sanitizedQuote = { ...pendingQuotation };
-      Object.keys(sanitizedQuote).forEach(key => {
-        if (sanitizedQuote[key] === undefined) sanitizedQuote[key] = "";
-      });
+      // Use more robust recursive cleaning
+      const sanitizedQuote = cleanFirestoreData(pendingQuotation);
 
       // 1. Generate PDF
       PDFService.generateProposal(sanitizedQuote, customer, profile);
 
       // 2. Save Log & Quote
-      await addDoc(collection(db, 'quotations'), sanitizedQuote);
-      await addDoc(collection(db, 'quotation-history'), {
-        quotationNo: pendingQuotation.quotationNo,
-        customerId: pendingQuotation.customerId,
-        customerName: pendingQuotation.customerName,
-        recipientInfo: pendingQuotation.recipientInfo || '',
-        routes: pendingQuotation.routes.map((r: any) => `${r.origin}-${r.destination} @ ${r.finalPrice.toFixed(2)}`),
-        summary: `Total ${pendingQuotation.routes.length} routes, Amt: ${pendingQuotation.routes[0]?.finalPrice.toFixed(2)} ${pendingQuotation.currency}`,
-        userId: profile?.uid || "",
-        userName: profile?.displayName || "",
-        timestamp: new Date().toISOString()
-      });
+      try {
+        await addDoc(collection(db, 'quotations'), sanitizedQuote);
+      } catch (e: any) {
+        handleFirestoreError(e, OperationType.WRITE, 'quotations');
+      }
+
+      try {
+        const historyData = cleanFirestoreData({
+          quotationNo: sanitizedQuote.quotationNo,
+          customerId: sanitizedQuote.customerId,
+          customerName: sanitizedQuote.customerName,
+          recipientInfo: sanitizedQuote.recipientInfo || '',
+          routes: sanitizedQuote.routes.map((r: any) => `${r.origin}-${r.destination} @ ${r.finalPrice.toFixed(2)}`),
+          summary: `Total ${sanitizedQuote.routes.length} routes, Amt: ${sanitizedQuote.routes[0]?.finalPrice.toFixed(2)} ${sanitizedQuote.currency}`,
+          userId: profile?.uid || "",
+          userName: profile?.displayName || "",
+          timestamp: new Date().toISOString()
+        });
+        await addDoc(collection(db, 'quotation-history'), historyData);
+      } catch (e: any) {
+        handleFirestoreError(e, OperationType.WRITE, 'quotation-history');
+      }
 
       message.success(t('common.success'));
       setPreviewModalOpen(false);
@@ -166,7 +224,15 @@ export const PricingList: React.FC = () => {
       quoteForm.resetFields();
       setCustomPrices({});
     } catch (e: any) {
-      message.error(t('common.error') + ': ' + e.message);
+      console.error('Quotation saving error:', e);
+      let displayError = e.message;
+      try {
+        if (e.message.startsWith('{')) {
+          const parsed = JSON.parse(e.message);
+          displayError = `Error at ${parsed.path} during ${parsed.operationType}`;
+        }
+      } catch(jsErr) {}
+      message.error(t('common.error') + ': ' + displayError);
     }
   };
 
@@ -299,8 +365,13 @@ export const PricingList: React.FC = () => {
                                 />
                             ) : (
                                 <span className="text-sm font-bold text-blue-600">
-                                    {r.currency} {calculateFinalPrice(r).toFixed(2)}
+                                    {r.currency} {calculateFinalPrice(r).toFixed(2)} / KG
                                 </span>
+                            )}
+                            {getFlatFees(r) > 0 && (
+                              <span className="text-[10px] text-amber-600 font-bold">
+                                + {r.currency} {getFlatFees(r)} (Flat)
+                              </span>
                             )}
                             <span className="text-[10px] text-slate-400">{t('pricing.allSurcharges')}</span>
                         </div>
@@ -354,23 +425,54 @@ export const PricingList: React.FC = () => {
           </Row>
 
           <Row gutter={16}>
-             <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')}><Input placeholder="5X123" /></Form.Item></Col>
-             <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')}><Input placeholder="B747-8F" /></Form.Item></Col>
-             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')}><Input placeholder="1,3,5,7" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')} initialValue=""><Input placeholder="5X123" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')} initialValue=""><Input placeholder="B747-8F" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')} initialValue=""><Input placeholder="1,3,5,7" /></Form.Item></Col>
              <Col span={6}><Form.Item name="currency" label={t('booking.currency')} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
 
           <Title level={5} className="mb-4 border-b pb-2 mt-4 text-blue-600">{t('pricing.costBreakdown')}</Title>
           <Row gutter={16}>
-             <Col span={8}><Form.Item name="baseFreight" label={t('pricing.cost')} rules={[{ required: true }]}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={8}><Form.Item name="fuelSurcharge" label={t('pricing.fuel')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={8}><Form.Item name="securityScreening" label={t('pricing.security')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="baseFreight" label={t('pricing.cost')} rules={[{ required: true }]}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="fuelSurcharge" label={t('pricing.fuel')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="securityScreening" label={t('pricing.security')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="terminalHandling" label={t('pricing.terminal')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
           </Row>
-          <Row gutter={16}>
-             <Col span={8}><Form.Item name="terminalHandling" label={t('pricing.terminal')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={8}><Form.Item name="customsClearance" label={t('pricing.customs')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={8}><Form.Item name="otherCharges" label={t('pricing.other')} initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+
+          <Title level={5} className="mb-2 mt-4 text-slate-700">{t('pricing.customs')} (Declaration Methods)</Title>
+          <Row gutter={12}>
+            {['formal', '9610', '9710', '9810'].map((method) => (
+              <Col span={6} key={method}>
+                <Card size="small" title={method.toUpperCase()} className="bg-slate-50">
+                  <Form.Item label={t('common.amount')} name={['customsMethods', method, 'amount']} initialValue={0}><InputNumber className="w-full" /></Form.Item>
+                  <Form.Item label={t('pricing.feeUnit')} name={['customsMethods', method, 'unit']} initialValue="per_shipment">
+                    <Select options={[{label: t('pricing.perKg'), value:'per_kg'}, {label: t('pricing.perShipment'), value:'per_shipment'}]} />
+                  </Form.Item>
+                </Card>
+              </Col>
+            ))}
           </Row>
+
+          <Title level={5} className="mb-2 mt-6 text-slate-700">{t('pricing.other')}</Title>
+          <Form.List name="miscFees">
+            {(fields, { add, remove }) => (
+              <div className="space-y-4">
+                {fields.map(({ key, name, ...restField }) => (
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, message: 'Fee Name required' }]}><Input placeholder="Internal Handling, etc." /></Form.Item>
+                    <Form.Item {...restField} name={[name, 'amount']} rules={[{ required: true }]}><InputNumber placeholder="Amount" /></Form.Item>
+                    <Form.Item {...restField} name={[name, 'unit']} initialValue="per_shipment">
+                      <Select style={{ width: 120 }} options={[{label: t('pricing.perKg'), value:'per_kg'}, {label: t('pricing.perShipment'), value:'per_shipment'}]} />
+                    </Form.Item>
+                    <Trash2 size={16} className="text-red-500 cursor-pointer" onClick={() => remove(name)} />
+                  </Space>
+                ))}
+                <Button type="dashed" onClick={() => add()} block icon={<Plus size={14} />}>
+                  Add Miscellaneous Charge
+                </Button>
+              </div>
+            )}
+          </Form.List>
         </Form>
       </Modal>
 

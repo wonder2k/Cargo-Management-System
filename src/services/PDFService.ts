@@ -47,19 +47,41 @@ export const PDFService = {
     doc.setFontSize(12);
     doc.text('BILL TO:', 20, 70);
     doc.setFontSize(10);
-    doc.text(localize(customer.name), 20, 75);
-    doc.text(customer.email || '', 20, 80);
+    doc.text(localize(customer?.name), 20, 75);
+    doc.text(customer?.email || '', 20, 80);
     
     // Items
-    const items = [
-      ['Service Description', 'Reference', 'Amount'],
-      ['Air Freight Charges', mawb?.internalMawbNo || invoice.mawbId || 'N/A', `${invoice.currency} ${invoice.amount.toLocaleString()}`],
-    ];
+    const head = [['Date', 'Reference / Route', 'PCK', 'GW', 'CW', 'Amount']];
+    let body = [];
+    
+    if (invoice.lineItems && invoice.lineItems.length > 0) {
+      body = invoice.lineItems.map((item: any) => [
+        item.flightDate ? new Date(item.flightDate).toLocaleDateString() : '-',
+        `${item.reference || 'N/A'}\n${localize(item.description)}\nDec: ${item.declarationMethod || '-'}`,
+        item.pieces || '-',
+        item.weight ? `${item.weight.toLocaleString()} KG` : '-',
+        item.chargeableWeight ? `${item.chargeableWeight.toLocaleString()} KG` : '-',
+        `${invoice.currency} ${item.amount.toLocaleString()}`
+      ]);
+    } else {
+      body = [[
+        '-',
+        mawb?.internalMawbNo || invoice.mawbId || 'N/A', 
+        '-', '-', '-',
+        `${invoice.currency} ${invoice.amount.toLocaleString()}`
+      ]];
+    }
     
     autoTable(doc, {
       startY: 90,
-      head: [items[0]],
-      body: [items[1]],
+      head: head,
+      body: body,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [37, 99, 235], halign: 'center' },
+      columnStyles: {
+        5: { halign: 'right', fontStyle: 'bold' }
+      }
     });
     
     // Total
@@ -117,20 +139,33 @@ export const PDFService = {
       doc.text(localize(line), 110, 78 + (i * 4));
     });
 
-    // Routes Table
     autoTable(doc, {
       startY: 100,
-      head: [['Origin', 'Destination', 'Carrier', 'Rate / KG', 'Surcharges', 'Final Price']],
-      body: quotation.routes.map((r: any) => [
-        r.origin,
-        r.destination,
-        r.carrier,
-        `${quotation.currency} ${r.basePrice}`,
-        'Included',
-        `${quotation.currency} ${r.finalPrice.toFixed(2)}`
-      ]),
+      head: [['Origin', 'Destination', 'Carrier', 'Breakdown', 'Final Price']],
+      body: quotation.routes.map((r: any) => {
+        const customs = r.customsMethods?.['formal'] || r.customs;
+        const miscText = (r.miscFees || []).map((m: any) => `${m.name}: ${m.amount} (${m.unit === 'per_kg' ? 'KG' : 'Ship'})`).join('\n');
+        
+        // Calculate dynamic freight breakdown
+        const freightPart = r.finalPrice - (r.fuel||0) - (r.security||0) - (r.terminal||0) - 
+          (customs?.unit === 'per_kg' ? (customs.amount||0) : 0) -
+          (r.miscFees || []).reduce((sum: number, m: any) => m.unit === 'per_kg' ? sum + m.amount : sum, 0);
+
+        return [
+          r.origin,
+          r.destination,
+          r.carrier,
+          `Freight: ${freightPart.toFixed(2)}\nFuel: ${r.fuel||0}\nSec: ${r.security||0}\nTerm: ${r.terminal||0}\nCus: ${customs?.amount||0} (${customs?.unit === 'per_kg' ? 'KG' : 'Ship'})\n${miscText}`,
+          `${quotation.currency} ${r.finalPrice.toFixed(2)} / KG` + (r.flatFees > 0 ? `\n+ ${r.currency} ${r.flatFees} (Flat)` : '')
+        ];
+      }),
+      styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { fillColor: [15, 23, 42] }, // slate-900
       alternateRowStyles: { fillColor: [241, 245, 249] },
+      columnStyles: {
+        3: { fontStyle: 'italic', fontSize: 6 },
+        4: { halign: 'right', fontStyle: 'bold' }
+      }
     });
 
     // Terms & Conditions

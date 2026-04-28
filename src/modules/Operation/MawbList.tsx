@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Steps, Form, Input, Select, App, Space, Typography, theme, Row, Col, Modal, Tabs, InputNumber, DatePicker, Tooltip, Empty, Upload, Divider, Badge } from 'antd';
 import { collection, query, getDocs, updateDoc, doc, addDoc, orderBy, where } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, cleanFirestoreData, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { MAWB, MawbStatus, Customer, Booking, BookingStatus } from '../../types';
 import { Plus, Info, LayoutList, History, FileText, ChevronRight, CheckCircle2, XCircle, Package, MapPin, Plane, Search, Play, Pause, Camera, ExternalLink, Activity } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,7 +20,7 @@ const MAWB_STATUSES: { value: MawbStatus; labelKey: string; color: string }[] = 
   { value: 'terminal_in', labelKey: 'operation.setTerminalIn', color: 'purple' },
   { value: 'departed', labelKey: 'booking.status.departed', color: 'blue' },
   { value: 'arrived', labelKey: 'booking.status.arrived', color: 'green' },
-  { value: 'closed', labelKey: 'common.ok', color: '#8c8c8c' },
+  { value: 'closed', labelKey: 'operation.financeSettlement', color: '#8c8c8c' },
   { value: 'exception', labelKey: 'operation.exception', color: 'red' },
   { value: 'on_hold', labelKey: 'booking.status.on_hold', color: 'volcano' },
 ];
@@ -53,7 +53,7 @@ export const MawbList: React.FC = () => {
   const [trackingForm] = Form.useForm();
   const [spaceForm] = Form.useForm();
   const [finalForm] = Form.useForm();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const warehouseGrossWeight = Form.useWatch('grossWeight', warehouseForm);
   const warehouseDims = Form.useWatch('dims', warehouseForm);
@@ -98,6 +98,7 @@ export const MawbList: React.FC = () => {
   }, []);
 
   const handleStatusTransition = (record: MAWB) => {
+    console.log('handleStatusTransition called for:', record.internalMawbNo, 'status:', record.status);
     setSelectedMawb(record);
     switch (record.status) {
       case 'booked':
@@ -127,17 +128,35 @@ export const MawbList: React.FC = () => {
         trackingForm.setFieldsValue(record);
         setTrackingModalOpen(true);
         break;
+      case 'arrived':
+        modal.confirm({
+          title: t('operation.financeSettlement'),
+          content: 'Confirm completion of all operations and transfer to Finance Settlement?',
+          onOk: () => {
+            console.log('Confirmed finance settlement clicked for mawb:', record.internalMawbNo);
+            handleUpdateStep('closed', {}, record);
+          }
+        });
+        break;
       default:
         setDrawerOpen(true);
     }
   };
 
-  const handleUpdateStep = async (newStatus: MawbStatus, values: any = {}) => {
-    if (!selectedMawb) return;
-    try {
+  const handleUpdateStep = async (newStatus: MawbStatus, values: any = {}, mawbRecord?: MAWB) => {
+      const targetMawb = mawbRecord || selectedMawb;
+      console.log('handleUpdateStep called: status=', newStatus, 'values=', values, 'mawb=', targetMawb?.internalMawbNo);
+      if (!targetMawb) {
+        console.log('handleUpdateStep: no selectedMawb');
+        return;
+      }
+      try {
       const now = new Date().toISOString();
       const cleanedValues = Object.fromEntries(
-        Object.entries(values).map(([k, v]) => [k, v === undefined ? null : v])
+        Object.entries(values).map(([k, v]) => {
+          if (dayjs.isDayjs(v)) return [k, (v as any).toISOString()];
+          return [k, v === undefined ? null : v];
+        })
       );
       
       const updatedData = {
@@ -146,25 +165,154 @@ export const MawbList: React.FC = () => {
         lastUpdated: now
       };
       
-      await updateDoc(doc(db, 'mawbs', selectedMawb.id), updatedData);
+      await updateDoc(doc(db, 'mawbs', targetMawb.id), updatedData);
       
-      // If warehouse in, also notify booking and update tracking status if possible
-      if (newStatus === 'warehouse_in') {
-        const q = query(collection(db, 'bookings'), where('mawbNo', '==', selectedMawb.internalMawbNo));
-        const bookingSnap = await getDocs(q);
-        if (!bookingSnap.empty) {
-          await updateDoc(doc(db, 'bookings', bookingSnap.docs[0].id), {
-            status: 'warehouse_in',
-            warehouseInfo: values
-          });
+      // Sync status to associated booking
+      const q = query(collection(db, 'bookings'), where('mawbNo', '==', targetMawb.internalMawbNo));
+      const bookingSnap = await getDocs(q);
+      let bookingData: Booking | null = null;
+      console.log('Searching booking for mawb:', targetMawb.internalMawbNo);
+      if (!bookingSnap.empty) {
+        bookingData = bookingSnap.docs[0].data() as Booking;
+        console.log('Booking found:', bookingData);
+        const bookingUpdate: any = { status: newStatus };
+        if (newStatus === 'warehouse_in') {
+          bookingUpdate.warehouseInfo = values;
         }
+        await updateDoc(doc(db, 'bookings', bookingSnap.docs[0].id), bookingUpdate);
+        console.log('Booking updated');
+      } else {
+        console.log('No booking found for mawb:', targetMawb.internalMawbNo);
+      }
+      
+            // If closed, transfer to Finance
+            console.log('Checking finance transfer condition: newStatus=', newStatus, 'isClosed=', newStatus === 'closed');
+            if (newStatus === 'closed') {
+                console.log('Inside newStatus === closed block. bookingData=', bookingData);
+                if (bookingData) {
+                    try {
+                        console.log('Attempting to transfer to Finance:', { mawbNo: targetMawb.internalMawbNo, customerId: bookingData.customerId });
+                        
+                        // Weights from warehouse info
+                        const actualWeight = (bookingData as any).warehouseInfo?.grossWeight || bookingData.weight;
+                        const chargeableWeight = (bookingData as any).warehouseInfo?.chargeableWeight || bookingData.weight;
+                        const pieces = (bookingData as any).warehouseInfo?.actualPieces || (bookingData as any).pieces || 0;
 
-        // Try to trigger 17TRACK registration automatically when warehouse in
+                        // AR calculation
+                        const calculateTotal = (data: Booking) => {
+                           let total = (data.unitPrice || 0) * chargeableWeight;
+                           total += (data.fuelSurcharge || 0) * chargeableWeight;
+                           total += (data.securityScreening || 0) * chargeableWeight;
+                           total += (data.terminalHandling || 0) * chargeableWeight;
+                           
+                           // Customs Fee based on selected declaration method
+                           const customs = data.customsMethods?.[data.declarationMethod] || data.customsClearance;
+                           if (customs) {
+                             total += customs.unit === 'per_kg' ? customs.amount * chargeableWeight : customs.amount;
+                           }
+                           
+                           // Multi-item Miscellaneous fees
+                           if (data.miscFees && data.miscFees.length > 0) {
+                             total += data.miscFees.reduce((sum, fee) => {
+                               return sum + (fee.unit === 'per_kg' ? fee.amount * chargeableWeight : fee.amount);
+                             }, 0);
+                           } else if (data.otherCharges) {
+                             total += data.otherCharges.unit === 'per_kg' ? data.otherCharges.amount * chargeableWeight : data.otherCharges.amount;
+                           }
+                           
+                           return total;
+                        };
+
+                        const arAmount = calculateTotal(bookingData);
+                        
+                        // 1. Generate Accounts Receivable
+                        const arData = cleanFirestoreData({
+                            mawbNo: targetMawb.internalMawbNo,
+                            customerId: bookingData.customerId,
+                            customerName: bookingData.customerName,
+                            route: `${targetMawb.origin}→${targetMawb.destination}`,
+                            pieces: pieces,
+                            weight: actualWeight,
+                            chargeableWeight: chargeableWeight,
+                            flightDate: bookingData.flightDate,
+                            declarationMethod: bookingData.declarationMethod,
+                            price: bookingData.unitPrice,
+                            currency: bookingData.currency,
+                            totalAmount: arAmount,
+                            status: 'pending',
+                            createdAt: new Date().toISOString()
+                        });
+                        
+                        try {
+                          await addDoc(collection(db, 'accountsReceivable'), arData);
+                        } catch (err: any) {
+                          handleFirestoreError(err, OperationType.WRITE, 'accountsReceivable');
+                        }
+
+                        // 2. Generate Accounts Payable (Cost to carrier)
+                        const calculateCost = (data: Booking) => {
+                           let total = (data.costPrice || data.unitPrice * 0.85) * chargeableWeight;
+                           total += (data.fuelSurcharge || 0) * chargeableWeight;
+                           total += (data.securityScreening || 0) * chargeableWeight;
+                           total += (data.terminalHandling || 0) * chargeableWeight;
+                           
+                           const customs = data.customsMethods?.[data.declarationMethod] || data.customsClearance;
+                           if (customs) {
+                             total += customs.unit === 'per_kg' ? customs.amount * chargeableWeight : customs.amount;
+                           }
+                           
+                           if (data.miscFees && data.miscFees.length > 0) {
+                             total += data.miscFees.reduce((sum, fee) => {
+                               return sum + (fee.unit === 'per_kg' ? fee.amount * chargeableWeight : fee.amount);
+                             }, 0);
+                           } else if (data.otherCharges) {
+                             total += data.otherCharges.unit === 'per_kg' ? data.otherCharges.amount * chargeableWeight : data.otherCharges.amount;
+                           }
+                           return total;
+                        };
+
+                        const apAmount = calculateCost(bookingData);
+                        
+                        const apData = cleanFirestoreData({
+                            mawbNo: targetMawb.internalMawbNo,
+                            vendorName: targetMawb.carrier || 'Carrier',
+                            vendorId: targetMawb.carrier || 'default_vendor',
+                            route: `${targetMawb.origin}→${targetMawb.destination}`,
+                            pieces: pieces,
+                            weight: actualWeight,
+                            chargeableWeight: chargeableWeight,
+                            flightDate: bookingData.flightDate,
+                            totalAmount: apAmount,
+                            currency: bookingData.currency,
+                            status: 'pending',
+                            createdAt: new Date().toISOString()
+                        });
+
+                        try {
+                          await addDoc(collection(db, 'accountsPayable'), apData);
+                        } catch (err: any) {
+                          handleFirestoreError(err, OperationType.WRITE, 'accountsPayable');
+                        }
+                        
+                        console.log('Successfully transferred to Finance (AR & AP generated)');
+                    } catch (error) {
+                        console.error('Failed to transfer to Finance:', error);
+                        message.error('Failed to transfer to Finance: ' + (error as Error).message);
+                    }
+                } else {
+                    console.log('Skipping finance transfer: bookingData is null');
+                }
+            } else {
+                console.log('Skipping finance transfer: newStatus is not closed');
+            }
+      
+      // If warehouse in, try to trigger 17TRACK registration automatically 
+      if (newStatus === 'warehouse_in') {
         try {
           fetch('/api/track/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ number: selectedMawb.internalMawbNo })
+            body: JSON.stringify({ number: targetMawb.internalMawbNo })
           });
         } catch (e) {
           console.error('Auto-track registration failed', e);
@@ -178,6 +326,7 @@ export const MawbList: React.FC = () => {
       setTerminalModalOpen(false);
       setTrackingModalOpen(false);
     } catch (e) {
+      console.error(e);
       message.error(t('common.error'));
     }
   };
@@ -240,10 +389,17 @@ export const MawbList: React.FC = () => {
         status: 'booked',
         lastUpdated: new Date().toISOString()
       };
-      await addDoc(collection(db, 'mawbs'), mawbData);
+      
+      const sanitizedMawb = cleanFirestoreData(mawbData);
+      
+      try {
+        await addDoc(collection(db, 'mawbs'), sanitizedMawb);
+      } catch (err: any) {
+        handleFirestoreError(err, OperationType.WRITE, 'mawbs');
+      }
 
       // 2. Update Booking
-      await updateDoc(doc(db, 'bookings', selectedBooking.id), {
+      const bookingUpdates = cleanFirestoreData({
         status: 'finalized',
         mawbNo: values.mawbNo || '',
         warehouseId: values.warehouseId || '',
@@ -251,11 +407,25 @@ export const MawbList: React.FC = () => {
         updatedAt: new Date().toISOString()
       });
 
+      try {
+        await updateDoc(doc(db, 'bookings', selectedBooking.id), bookingUpdates);
+      } catch (err: any) {
+        handleFirestoreError(err, OperationType.WRITE, `bookings/${selectedBooking.id}`);
+      }
+
       message.success('MAWB Issued - Moved to Operation Center');
       setFinalBookingModalOpen(false);
       fetchData();
     } catch (e: any) {
-      message.error('Finalization failed: ' + e.message);
+      console.error('Finalization error:', e);
+      let displayError = e.message;
+      try {
+        if (e.message.startsWith('{')) {
+          const parsed = JSON.parse(e.message);
+          displayError = `Error at ${parsed.path} during ${parsed.operationType}`;
+        }
+      } catch(jsErr) {}
+      message.error('Finalization failed: ' + displayError);
     }
   };
 
@@ -304,52 +474,63 @@ export const MawbList: React.FC = () => {
                   loading={loading} 
                   rowKey="id"
                   columns={[
-                    { 
-                      title: t('operation.mawbRef'), 
-                      dataIndex: 'internalMawbNo', 
-                      sorter: (a, b) => a.internalMawbNo.localeCompare(b.internalMawbNo),
-                      render: (text, record) => (
-                        <div className="flex items-center gap-2">
-                           <div className="cursor-pointer group" onClick={() => { setSelectedMawb(record); setDrawerOpen(true); }}>
-                             <span className="text-sm font-mono font-bold text-blue-600 group-hover:underline">{text}</span>
-                             <p className="text-[10px] text-slate-400">{record.airlineMawbNo || '--'}</p>
-                           </div>
-                           <Tooltip title={t('operation.viewTrackingInternal')}>
-                              <Button 
-                                type="text" 
-                                size="small" 
-                                icon={<Search size={14} className="text-slate-400" />} 
-                                onClick={() => { setSelectedMawb(record); setDrawerOpen(true); }}
-                              />
-                           </Tooltip>
-                           <Tooltip title={t('operation.manualQuery')}>
-                              <Button 
-                                type="text" 
-                                size="small" 
-                                icon={<ExternalLink size={14} className="text-blue-500" />} 
-                                onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${record.airlineMawbNo || record.internalMawbNo}`, '_blank')}
-                              />
-                           </Tooltip>
-                        </div>
-                      )
-                    },
+                     { 
+                       title: t('operation.mawbRef'), 
+                       dataIndex: 'internalMawbNo', 
+                       sorter: (a, b) => a.internalMawbNo.localeCompare(b.internalMawbNo),
+                       render: (text, record) => (
+                         <div className="flex items-center gap-2">
+                            <div className="cursor-pointer group" onClick={() => { setSelectedMawb(record); setDrawerOpen(true); }}>
+                              <span className="text-sm font-mono font-bold text-blue-600 group-hover:underline">{text}</span>
+                              <p className="text-[10px] text-slate-400">{record.airlineMawbNo || '--'}</p>
+                            </div>
+                            <Tooltip title={t('operation.viewTrackingInternal')}>
+                               <Button 
+                                 type="text" 
+                                 size="small" 
+                                 icon={<Search size={14} className="text-slate-400" />} 
+                                 onClick={() => { setSelectedMawb(record); setDrawerOpen(true); }}
+                               />
+                            </Tooltip>
+                            <Tooltip title={t('operation.manualQuery')}>
+                               <Button 
+                                 type="text" 
+                                 size="small" 
+                                 icon={<ExternalLink size={14} className="text-blue-500" />} 
+                                 onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${record.airlineMawbNo || record.internalMawbNo}`, '_blank')}
+                               />
+                            </Tooltip>
+                         </div>
+                       )
+                     },
                     {
                       title: t('operation.docs'),
                       render: (_, r) => {
-                        // Find booking for this MAWB to get manifest
                         const b = pendingBookings.find(bk => bk.mawbNo === r.internalMawbNo);
+                        const hasManifest = !!b?.manifestFileUrl;
                         return (
                           <Space size="middle">
-                            {b?.manifestFileUrl ? (
-                              <Tooltip title={`${t('booking.manifest')}: ${b.manifestFileUrl}`}>
-                                <Button size="small" icon={<Package size={14} />} onClick={() => message.info(`${t('common.loading')} ${b.manifestFileUrl}`)} />
-                              </Tooltip>
-                            ) : <Badge status="default" text={t('operation.docs')} className="text-[10px]" />}
+                            <Tooltip title={hasManifest ? `${t('booking.manifest')}: ${b.manifestFileUrl}` : t('booking.uploadManifest')}>
+                              <Button 
+                                size="small" 
+                                icon={<Package size={14} />} 
+                                className={hasManifest ? "text-blue-600 border-blue-600" : "text-red-500 border-red-500"}
+                                onClick={() => hasManifest ? message.success(`${t('common.loading')} ${b.manifestFileUrl}`) : message.warning(t('booking.uploadManifest'))}
+                              >
+                                {hasManifest ? (b.manifestFileUrl.length > 15 ? b.manifestFileUrl.slice(0, 12) + '...' : b.manifestFileUrl) : t('booking.manifest')}
+                              </Button>
+                            </Tooltip>
                             
                             {b?.draftMawbUrl ? (
                               <Tooltip title={`${t('operation.steps.draft')}${b.isDraftConfirmed ? ` & ${t('common.confirm')}` : ''}`}>
                                 <Badge dot={!b.isDraftConfirmed} status={b.isDraftConfirmed ? "success" : "processing"}>
-                                  <Button size="small" icon={<FileText size={14} />} onClick={() => message.info(`${t('common.loading')} ${b.draftMawbUrl}`)} />
+                                  <Button 
+                                    size="small" 
+                                    icon={<FileText size={14} />} 
+                                    onClick={() => message.success(`${t('common.loading')} ${b.draftMawbUrl}`)}
+                                  >
+                                    {b.draftMawbUrl.length > 15 ? b.draftMawbUrl.slice(0, 12) + '...' : b.draftMawbUrl}
+                                  </Button>
                                 </Badge>
                               </Tooltip>
                             ) : null}
@@ -397,7 +578,18 @@ export const MawbList: React.FC = () => {
                       render: (_, r) => (
                         <Space>
                           {r.status !== 'on_hold' ? (
-                            <Button size="small" type="text" danger onClick={() => handleUpdateStep('on_hold')} icon={<Pause size={14} />}>{t('booking.status.on_hold')}</Button>
+                            <Button 
+                              size="small" 
+                              type="text" 
+                              danger 
+                              disabled={['terminal_in', 'departed', 'arrived', 'closed'].includes(r.status)}
+                              onClick={() => {
+                                handleUpdateStep('on_hold', {}, r);
+                              }} 
+                              icon={<Pause size={14} />}
+                            >
+                              {t('booking.status.on_hold')}
+                            </Button>
                           ) : (
                             <Button size="small" type="primary" onClick={() => handleStatusTransition(r)} icon={<Play size={14} />}>{t('common.resume')}</Button>
                           )}
@@ -419,13 +611,38 @@ export const MawbList: React.FC = () => {
             children: (
               <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
                 <Table 
-                  dataSource={pendingBookings} 
+                  dataSource={pendingBookings.filter(b => ['pending', 'client_accepted'].includes(b.status))} 
                   loading={loading} 
                   rowKey="id"
                   columns={[
-                    { title: t('booking.title'), dataIndex: 'bookingNo', render: (t, r) => <span className="font-mono font-bold">{t}</span> },
+                    { 
+                      title: t('operation.mawbRef'), 
+                      render: (_, r) => (
+                        <div className="flex flex-col">
+                          <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
+                          <span className="text-[10px] text-slate-400">{dayjs(r.createdAt).format('YYYY-MM-DD HH:mm')}</span>
+                        </div>
+                      )
+                    },
+                    { 
+                      title: t('operation.route'), 
+                      render: (_, r) => (
+                        <div className="flex flex-col">
+                          <Tag color="geekblue" className="w-fit">{r.origin} → {r.destination}</Tag>
+                          <span className="text-[10px] text-slate-400 mt-1">ETD: {dayjs(r.flightDate).format('YYYY-MM-DD')}</span>
+                        </div>
+                      )
+                    },
                     { title: t('booking.customer'), dataIndex: 'customerName' },
-                    { title: t('booking.cargo'), render: (_, r) => `${r.pieces}P / ${r.weight}K / ${r.volume}C` },
+                    { 
+                      title: t('booking.cargo'), 
+                      render: (_, r) => (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium">{r.pieces}P / {r.weight}K / {r.volume}C</span>
+                          <span className="text-[10px] text-slate-400 truncate w-32">{r.goodsDescription}</span>
+                        </div>
+                      )
+                    },
                     { title: t('common.actions'), align: 'right', render: (_, r) => (
                         <Space>
                            {r.status === 'pending' && <Button size="small" type="primary" onClick={() => { setSelectedBooking(r); setSpaceModalOpen(true); }}>{t('operation.setConfirmed')}</Button>}
@@ -448,7 +665,7 @@ export const MawbList: React.FC = () => {
         onOk={() => warehouseForm.submit()}
         width={700}
       >
-        <Form form={warehouseForm} layout="vertical" onFinish={(v) => handleUpdateStep('warehouse_in', v)}>
+        <Form form={warehouseForm} layout="vertical" onFinish={(v) => handleUpdateStep('warehouse_in', v, selectedMawb || undefined)}>
           <Row gutter={16}>
             <Col span={8}><Form.Item name="grossWeight" label={`${t('operation.grossWeight')} (KG)`} rules={[{ required: true }]}><InputNumber className="w-full" precision={2} /></Form.Item></Col>
             <Col span={8}><Form.Item name="chargeableWeight" label={`${t('operation.chargeableWeight')} (KG)`} rules={[{ required: true }]}><InputNumber className="w-full" precision={2} readOnly /></Form.Item></Col>
@@ -529,7 +746,7 @@ export const MawbList: React.FC = () => {
         onCancel={() => setCustomsModalOpen(false)}
         onOk={() => customsForm.submit()}
       >
-        <Form form={customsForm} layout="vertical" onFinish={(v) => handleUpdateStep('customs', v)} initialValues={{ customsCleared: true }}>
+        <Form form={customsForm} layout="vertical" onFinish={(v) => handleUpdateStep('customs', v, selectedMawb || undefined)} initialValues={{ customsCleared: true }}>
            <Form.Item name="customsCleared" label={t('common.confirm')} valuePropName="checked">
              <Select options={[{ label: t('common.ok'), value: true }, { label: t('common.cancel'), value: false }]} />
            </Form.Item>
@@ -549,7 +766,7 @@ export const MawbList: React.FC = () => {
         onCancel={() => setTerminalModalOpen(false)}
         onOk={() => terminalForm.submit()}
       >
-        <Form form={terminalForm} layout="vertical" onFinish={(v) => handleUpdateStep('terminal_in', v)} initialValues={{ terminalConfirmed: true }}>
+        <Form form={terminalForm} layout="vertical" onFinish={(v) => handleUpdateStep('terminal_in', v, selectedMawb || undefined)} initialValues={{ terminalConfirmed: true }}>
            <Form.Item name="terminalConfirmed" label={t('common.confirm')} valuePropName="checked">
              <Select options={[{ label: t('common.ok'), value: true }, { label: t('common.cancel'), value: false }]} />
            </Form.Item>
@@ -570,21 +787,21 @@ export const MawbList: React.FC = () => {
         onOk={() => trackingForm.submit()}
         width={600}
       >
-        <Form form={trackingForm} layout="vertical" onFinish={(v) => handleUpdateStep(v.ata ? 'arrived' : 'departed', v)}>
+        <Form form={trackingForm} layout="vertical" onFinish={(v) => handleUpdateStep(v.ata ? 'arrived' : 'departed', v, selectedMawb || undefined)}>
            <Row gutter={16}>
              <Col span={12}>
                <Form.Item name="atd" label={t('operation.departure')}>
-                 <DatePicker showTime className="w-full" />
+                 <DatePicker showTime format="YYYY-MM-DD HH:mm" className="w-full" />
                </Form.Item>
              </Col>
              <Col span={12}>
                <Form.Item name="ata" label={t('operation.arrival')}>
-                 <DatePicker showTime className="w-full" />
+                 <DatePicker showTime format="YYYY-MM-DD HH:mm" className="w-full" />
                </Form.Item>
              </Col>
            </Row>
            <Form.Item name="pod_time" label={t('operation.pickup')}>
-              <DatePicker showTime className="w-full" />
+              <DatePicker showTime format="YYYY-MM-DD HH:mm" className="w-full" />
            </Form.Item>
         </Form>
       </Modal>

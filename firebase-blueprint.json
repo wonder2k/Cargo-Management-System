@@ -113,6 +113,45 @@
         "status": { "type": "string", "enum": ["draft", "issued", "partial", "paid"] }
       },
       "required": ["invoiceNo", "customerId", "mawbId", "amount"]
+    },
+    "AccountsReceivable": {
+      "title": "Accounts Receivable",
+      "description": "Customer billing record",
+      "type": "object",
+      "properties": {
+        "mawbNo": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "route": { "type": "string" },
+        "weight": { "type": "number" },
+        "chargeableWeight": { "type": "number" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "invoiced"] },
+        "invoiceId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mawbNo", "customerId", "totalAmount"]
+    },
+    "AccountsPayable": {
+      "title": "Accounts Payable",
+      "description": "System costs/carrier payments record",
+      "type": "object",
+      "properties": {
+        "mawbNo": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "route": { "type": "string" },
+        "weight": { "type": "number" },
+        "chargeableWeight": { "type": "number" },
+        "cost": { "type": "number" },
+        "currency": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "invoiced", "paid"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mawbNo", "vendorId", "totalAmount"]
     }
   },
   "firestore": {
@@ -122,6 +161,8 @@
     "/quotations/{quoteId}": { "schema": "Quotation", "description": "Sent quotes" },
     "/mawbs/{mawbId}": { "schema": "MAWB", "description": "Shipment main records" },
     "/mawbs/{mawbId}/operations/{opId}": { "schema": "MawbOperation", "description": "Shipment logs" },
-    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Financial billing" }
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Financial billing" },
+    "/accountsReceivable/{arId}": { "schema": "AccountsReceivable", "description": "Accounts receivable records" },
+    "/accountsPayable/{apId}": { "schema": "AccountsPayable", "description": "Accounts payable records" }
   }
 }

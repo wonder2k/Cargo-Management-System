@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, Typography } from 'antd';
 import { collection, query, getDocs, addDoc, updateDoc, doc, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, cleanFirestoreData, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Customer, CustomerType, PaymentTerm, Currency } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { UserPlus, Edit2, Search, AlertCircle } from 'lucide-react';
@@ -122,20 +122,39 @@ export const CustomerList: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     try {
+      // Clean undefined values for Firestore using shared helper
+      const sanitized = cleanFirestoreData(values);
+
       if (editingCustomer) {
-        await updateDoc(doc(db, 'customers', editingCustomer.id), values);
-        message.success(t('common.updated'));
+        try {
+          await updateDoc(doc(db, 'customers', editingCustomer.id), sanitized);
+          message.success(t('common.updated'));
+        } catch (error: any) {
+          handleFirestoreError(error, OperationType.WRITE, `customers/${editingCustomer.id}`);
+        }
       } else {
-        await addDoc(collection(db, 'customers'), {
-          ...values,
-          status: 'active'
-        });
-        message.success(t('common.added'));
+        try {
+          await addDoc(collection(db, 'customers'), {
+            ...sanitized,
+            status: 'active'
+          });
+          message.success(t('common.added'));
+        } catch (error: any) {
+          handleFirestoreError(error, OperationType.WRITE, 'customers');
+        }
       }
       setModalOpen(false);
       fetchCustomers();
     } catch (error: any) {
-      message.error('Operation failed: ' + error.message);
+      console.error('Customer Ops Error:', error);
+      let displayError = error.message;
+      try {
+        if (error.message.startsWith('{')) {
+          const parsed = JSON.parse(error.message);
+          displayError = `Permission denied at ${parsed.path}`;
+        }
+      } catch (jsErr) {}
+      message.error('Operation failed: ' + displayError);
     }
   };
 

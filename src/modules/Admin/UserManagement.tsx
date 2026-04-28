@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, App, Select, Space, Card, Typography } from 'antd';
-import { collection, query, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, query, getDocs, updateDoc, doc, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
+import { db, auth, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { UserProfile, Role, UserStatus } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { UserCheck, UserX, Shield } from 'lucide-react';
@@ -14,7 +14,7 @@ export const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { t } = useTranslation();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -55,15 +55,98 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleResetSystem = async () => {
+    modal.confirm({
+      title: 'Reset System Data',
+      content: 'Are you sure you want to delete ALL operational data (Rates, Bookings, MAWBs, Finance)? This cannot be undone.',
+      okText: 'Yes, Clear All',
+      cancelText: 'Cancel',
+      okType: 'danger',
+      onOk: async () => {
+        setLoading(true);
+        const collectionsToPurge = [
+          'quotation-history',
+          'flight-rates',
+          'quotations',
+          'bookings',
+          'mawbs',
+          'accountsReceivable',
+          'accountsPayable',
+          'invoices'
+        ];
+
+        try {
+          const collectionsToPurge = [
+            'quotation-history',
+            'flight-rates',
+            'quotations',
+            'bookings',
+            'mawbs',
+            'accountsReceivable',
+            'accountsPayable',
+            'invoices',
+            'invoice-history'
+          ];
+
+          for (const collName of collectionsToPurge) {
+            let snap;
+            try {
+              snap = await getDocs(collection(db, collName));
+            } catch (err: any) {
+              if (err.code === 'permission-denied') {
+                handleFirestoreError(err, OperationType.LIST, collName);
+              }
+              console.warn(`Skipping ${collName} due to error:`, err.message);
+              continue;
+            }
+
+            if (snap && !snap.empty) {
+              // Handle potentially large collections by chunking batch deletes
+              const docs = snap.docs;
+              for (let i = 0; i < docs.length; i += 500) {
+                const batch = writeBatch(db);
+                const chunk = docs.slice(i, i + 500);
+                chunk.forEach(d => batch.delete(d.ref));
+                try {
+                  await batch.commit();
+                } catch (err: any) {
+                  handleFirestoreError(err, OperationType.WRITE, collName);
+                }
+              }
+            }
+          }
+          message.success('System data successfully cleared. Users and Customers were preserved.');
+        } catch (error: any) {
+          console.error('Reset failed details:', error.message);
+          let displayError = error.message;
+          try {
+            if (error.message.startsWith('{')) {
+              const parsed = JSON.parse(error.message);
+              displayError = `Permission denied at ${parsed.path} during ${parsed.operationType}`;
+            }
+          } catch(e) {}
+          message.error('Reset failed: ' + displayError);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
   if (profile?.role !== 'admin') {
     return <div className="p-8 text-center text-slate-500 font-medium">{t('common.accessDenied')}</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <Title level={2} className="mb-0">{t('users.title')}</Title>
-        <Text type="secondary">{t('users.subtitle')}</Text>
+      <div className="flex justify-between items-start">
+        <div>
+          <Title level={2} className="mb-0">{t('users.title')}</Title>
+          <Text type="secondary">{t('users.subtitle')}</Text>
+        </div>
+        <Button danger type="primary" onClick={handleResetSystem} loading={loading}>
+          Format System (Clear All Cargo Data)
+        </Button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

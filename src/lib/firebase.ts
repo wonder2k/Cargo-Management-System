@@ -6,3 +6,66 @@ import firebaseConfig from '../../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+export const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+};
+
+/**
+ * Deep cleans an object by removing all keys with 'undefined' values.
+ * This is crucial for Firestore compatibility as it rejects 'undefined'.
+ */
+export const cleanFirestoreData = (data: any): any => {
+  if (data === undefined) return null;
+  if (data === null) return null;
+  
+  if (Array.isArray(data)) {
+    return data.map(cleanFirestoreData);
+  }
+  
+  if (typeof data === 'object') {
+    const cleaned: any = {};
+    Object.keys(data).forEach(key => {
+      const value = data[key];
+      if (value !== undefined) {
+        cleaned[key] = cleanFirestoreData(value);
+      }
+    });
+    return cleaned;
+  }
+  
+  return data;
+};

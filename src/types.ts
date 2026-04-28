@@ -41,6 +41,13 @@ export interface Customer {
   status: 'active' | 'frozen';
 }
 
+export type FeeUnit = 'per_kg' | 'per_shipment';
+
+export interface FeeStructure {
+  amount: number;
+  unit: FeeUnit;
+}
+
 export interface FlightRate {
   id: string;
   carrier: string;
@@ -55,11 +62,17 @@ export interface FlightRate {
   
   // Base rates (Admin side)
   baseFreight: number;
-  fuelSurcharge: number;
-  securityScreening: number;
-  terminalHandling: number;
-  customsClearance?: number;
-  otherCharges?: number;
+  fuelSurcharge: number; // per KG
+  securityScreening: number; // per KG
+  terminalHandling: number; // per KG
+  
+  // New complex fee structure
+  customsMethods?: Partial<Record<ExportDeclarationMethod, FeeStructure>>;
+  miscFees?: { name: string, amount: number, unit: FeeUnit }[];
+
+  // Legacy fields (optional for backward compatibility)
+  customsClearance?: FeeStructure;
+  otherCharges?: FeeStructure;
   
   currency: string;
   lastUpdated: string;
@@ -209,7 +222,19 @@ export interface Booking {
   goodsDescription: string;
   declarationMethod: ExportDeclarationMethod;
   unitPrice: number;
+  costPrice?: number;
   currency: string;
+  
+  // Detailed surcharges from the baseline rate
+  fuelSurcharge?: number;
+  securityScreening?: number;
+  terminalHandling?: number;
+  
+  customsMethods?: Partial<Record<ExportDeclarationMethod, FeeStructure>>;
+  miscFees?: { name: string, amount: number, unit: FeeUnit }[];
+
+  customsClearance?: FeeStructure;
+  otherCharges?: FeeStructure;
 
   // Operation Space Handling
   spaceStatus?: 'Yes' | 'No' | 'Partial';

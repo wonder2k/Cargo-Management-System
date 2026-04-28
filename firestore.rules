@@ -14,18 +14,22 @@ service cloud.firestore {
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     
     // Role-based helpers
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    function isApproved() {
-      return isSignedIn() && (request.auth.token.email == 'wonder2k@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().status == 'approved'));
-    }
     function isAdmin() {
-      return isSignedIn() && (request.auth.token.email == 'wonder2k@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin'));
+      return isSignedIn() && (request.auth.token.email == 'wonder2k@gmail.com' || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
-    function isBusiness() { return isApproved() && (getUserData().role == 'business' || isAdmin()); }
-    function isOperation() { return isApproved() && (getUserData().role == 'operation' || isAdmin()); }
-    function isFinance() { return isApproved() && (getUserData().role == 'finance' || isAdmin()); }
+    
+    function isApproved() {
+      return isSignedIn() && (isAdmin() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'));
+    }
+
+    function isBusiness() { return isApproved() && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business'); }
+    function isOperation() { return isApproved() && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'operation'); }
+    function isFinance() { return isApproved() && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'finance'); }
+
 
     // User Profiles
     match /users/{userId} {
@@ -53,7 +57,8 @@ service cloud.firestore {
     // Flight Rates
     match /flight-rates/{rateId} {
       allow read: if isBusiness() || isOperation();
-      allow write: if isBusiness();
+      allow create, update: if isBusiness();
+      allow delete: if isAdmin();
     }
 
     // Quotations
@@ -61,6 +66,7 @@ service cloud.firestore {
       allow read: if isBusiness();
       allow create: if isBusiness();
       allow update: if isBusiness() && (existing().status != 'accepted' || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // MAWBs
@@ -68,6 +74,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isBusiness() || isOperation() || isAdmin();
       allow update: if isOperation() || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Bookings
@@ -82,6 +89,7 @@ service cloud.firestore {
     match /quotation-history/{historyId} {
       allow read: if isBusiness();
       allow create: if isBusiness();
+      allow delete: if isAdmin();
     }
 
     // MAWB Operations
@@ -94,12 +102,28 @@ service cloud.firestore {
     match /invoices/{invoiceId} {
       allow read: if isFinance() || isBusiness();
       allow write: if isFinance();
+      allow delete: if isAdmin();
     }
 
     // Invoice History
     match /invoice-history/{historyId} {
       allow read: if isFinance();
       allow create: if isFinance();
+      allow delete: if isAdmin();
+    }
+
+    // Accounts Receivable
+    match /accountsReceivable/{arId} {
+      allow read: if isFinance() || isBusiness();
+      allow write: if isFinance() || isOperation();
+      allow delete: if isAdmin();
+    }
+
+    // Accounts Payable
+    match /accountsPayable/{apId} {
+      allow read: if isFinance() || isOperation();
+      allow write: if isFinance() || isOperation();
+      allow delete: if isAdmin();
     }
   }
 }
