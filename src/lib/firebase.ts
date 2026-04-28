@@ -53,10 +53,10 @@ export const cleanFirestoreData = (data: any): any => {
   if (data === null) return null;
   
   if (Array.isArray(data)) {
-    return data.map(cleanFirestoreData);
+    return data.map(v => cleanFirestoreData(v));
   }
   
-  if (typeof data === 'object') {
+  if (typeof data === 'object' && data.constructor === Object) {
     const cleaned: any = {};
     Object.keys(data).forEach(key => {
       const value = data[key];

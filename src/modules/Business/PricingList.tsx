@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Checkbox, Tabs, Badge } from 'antd';
-import { collection, query, getDocs, addDoc, orderBy, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../../lib/firebase';
 import { FlightRate, Customer } from '../../types';
 import { Plane, Plus, ChevronRight, Download, FileText, Settings, History, Trash2, Edit2, TrendingUp, DollarSign } from 'lucide-react';
@@ -194,14 +194,14 @@ export const PricingList: React.FC = () => {
       // 1. Generate PDF
       PDFService.generateProposal(sanitizedQuote, customer, profile);
 
-      // 2. Save Log & Quote
+      // 2. Save Log & Quote atomically
       try {
-        await addDoc(collection(db, 'quotations'), sanitizedQuote);
-      } catch (e: any) {
-        handleFirestoreError(e, OperationType.WRITE, 'quotations');
-      }
+        const batch = writeBatch(db);
+        const quoteRef = doc(collection(db, 'quotations'));
+        const historyRef = doc(collection(db, 'quotation-history'));
 
-      try {
+        batch.set(quoteRef, sanitizedQuote);
+
         const historyData = cleanFirestoreData({
           quotationNo: sanitizedQuote.quotationNo,
           customerId: sanitizedQuote.customerId,
@@ -213,9 +213,11 @@ export const PricingList: React.FC = () => {
           userName: profile?.displayName || "",
           timestamp: new Date().toISOString()
         });
-        await addDoc(collection(db, 'quotation-history'), historyData);
+
+        batch.set(historyRef, historyData);
+        await batch.commit();
       } catch (e: any) {
-        handleFirestoreError(e, OperationType.WRITE, 'quotation-history');
+        handleFirestoreError(e, OperationType.WRITE, 'quotations-batch');
       }
 
       message.success(t('common.success'));

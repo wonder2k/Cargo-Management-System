@@ -160,6 +160,8 @@ export interface MAWB {
   customsRemark?: string;
   customsException?: string;
   terminalRemark?: string;
+  terminalException?: string;
+  terminalReturnedItems?: { subMawb: string, reason: string, photoUrl?: string }[];
   manifestUrl?: string; // Document requested
 }
 
@@ -185,6 +187,23 @@ export interface Invoice {
   issueDate: string;
   dueDate: string;
   status: InvoiceStatus;
+  lineItems: any[];
+  createdAt: string;
+}
+
+export interface AccountsPayable {
+  id: string;
+  mawbNo: string;
+  vendorName: string;
+  route: string;
+  pieces: number;
+  weight: number;
+  totalAmount: number;
+  currency: string;
+  status: 'pending' | 'paid';
+  createdAt: string;
+  vendorInvoiceUrl?: string; // Uploaded invoice URL
+  lineItems?: any[];        // Breakdown items
 }
 
 export type BookingStatus = 
@@ -259,4 +278,8 @@ export interface Booking {
   status: BookingStatus;
   createdAt: string;
   createdBy: string;
+  salespersonName?: string;
+  salespersonContact?: string;
+  warehouseInfo?: any;
+  terminalInfo?: any;
 }

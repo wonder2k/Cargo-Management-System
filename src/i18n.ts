@@ -45,7 +45,11 @@ const resources = {
         "inactive": "Inactive",
         "updated": "Update successful",
         "added": "Added successfully",
-        "deleted": "Deleted successfully"
+        "deleted": "Deleted successfully",
+        "origin": "Origin",
+        "destination": "Destination",
+        "all": "All",
+        "reset": "Reset"
       },
       "booking": {
         "title": "Air Cargo Bookings",
@@ -82,6 +86,10 @@ const resources = {
           "pending": "Pending Info",
           "quoted": "Price Quoted",
           "accepted": "Client Accepted",
+          "client_accepted": "Client Accepted",
+          "booked": "Booked (Waiting for Entry)",
+          "space_confirmed": "Space Confirmed",
+          "space_rejected": "Space Rejected",
           "prebooked": "Space Pre-booked",
           "partial": "Partial Space",
           "finalized": "MAWB Issued",
@@ -89,7 +97,8 @@ const resources = {
           "arrived": "Arrived",
           "warehouse_in": "Whse Entry Confirmed",
           "customs": "Customs Cleared",
-          "on_hold": "Hold"
+          "on_hold": "Hold",
+          "waitClientAccept": "Waiting for client acceptance"
         }
       },
       "dashboard": {
@@ -123,6 +132,7 @@ const resources = {
         "subtitle": "Enhanced Operation Console: Space, Warehouse, Customs & Tracking",
         "activeShipments": "Active Shipments",
         "newRequests": "New Booking Requests",
+        "finishedRequests": "Finished Bookings",
         "mawbRef": "MAWB Reference",
         "docs": "Docs",
         "route": "Route",
@@ -157,9 +167,9 @@ const resources = {
         "product": "Product",
         "steps": {
           "warehouse": "Step 1: Warehouse Verification",
-          "draft": "Step 1.5: MAWB Draft Confirmation",
+          "draft": "MAWB Draft",
           "customs": "Step 2: Customs Clearance",
-          "terminal": "Step 3: Transfer to Cargo Terminal",
+          "terminal": "Step 3: Cargo Terminal",
           "tracking": "Step 4: Flight Execution"
         },
         "tracking": {
@@ -219,7 +229,12 @@ const resources = {
         "activeInvoices": "Active Invoices",
         "pendingAR": "Pending AR items",
         "pendingAP": "Pending AP items",
-        "mawbContrast": "MAWB Profitability Contrast"
+        "mawbContrast": "MAWB Profitability Contrast",
+        "mawb": "MAWB",
+        "flightDate": "Flight Date",
+        "revenue": "Revenue",
+        "cost": "Cost",
+        "profit": "Profit"
       },
       "customers": {
         "title": "Customer Database",
@@ -402,7 +417,11 @@ const resources = {
         "inactive": "停用",
         "updated": "更新成功",
         "added": "添加成功",
-        "deleted": "删除成功"
+        "deleted": "删除成功",
+        "origin": "始发站",
+        "destination": "目的站",
+        "all": "全部",
+        "reset": "重置"
       },
       "booking": {
         "title": "航司订舱",
@@ -410,7 +429,7 @@ const resources = {
         "customer": "委托客户",
         "route": "航线与班次",
         "cargo": "货物详情",
-        "manifest": "载货详单",
+        "manifest": "载货清单",
         "order": "托运书",
         "confirmDraft": "确认草单",
         "carrier": "承运人",
@@ -439,6 +458,10 @@ const resources = {
           "pending": "待完善",
           "quoted": "已报价",
           "accepted": "客户接受",
+          "client_accepted": "客户接受",
+          "booked": "已订舱 (待入仓)",
+          "space_confirmed": "舱位预订确认",
+          "space_rejected": "舱位预订被拒",
           "prebooked": "已放仓",
           "partial": "部分放仓",
           "finalized": "已制单 (待入仓)",
@@ -446,7 +469,8 @@ const resources = {
           "arrived": "已到达",
           "warehouse_in": "入仓确认",
           "customs": "报关完成",
-          "on_hold": "挂起"
+          "on_hold": "挂起",
+          "waitClientAccept": "等待客户确认"
         }
       },
       "dashboard": {
@@ -480,6 +504,7 @@ const resources = {
         "subtitle": "增强型操作控制台：舱位、仓库、清关与追踪",
         "activeShipments": "活跃运单",
         "newRequests": "新订舱申请",
+        "finishedRequests": "已订舱申请",
         "mawbRef": "主单参考",
         "docs": "文档",
         "route": "航线",
@@ -514,7 +539,7 @@ const resources = {
         "product": "产品",
         "steps": {
           "warehouse": "第一步：仓库核实",
-          "draft": "第一步半：主单草单确认",
+          "draft": "主单草单",
           "customs": "第二步：清关状态",
           "terminal": "第三步：货物交站",
           "tracking": "第四步：航班执行"
@@ -576,7 +601,12 @@ const resources = {
         "activeInvoices": "当前发票",
         "pendingAR": "待入账应收",
         "pendingAP": "待入账应付",
-        "mawbContrast": "运单盈亏对照"
+        "mawbContrast": "运单盈亏对照",
+        "mawb": "主单号",
+        "flightDate": "航班日期",
+        "revenue": "收入",
+        "cost": "成本",
+        "profit": "盈亏"
       },
       "customers": {
         "title": "客户管理",

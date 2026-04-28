@@ -51,18 +51,32 @@ export const PDFService = {
     doc.text(customer?.email || '', 20, 80);
     
     // Items
-    const head = [['Date', 'Reference / Route', 'PCK', 'GW', 'CW', 'Amount']];
+    const head = [['Date', 'Reference / Route', 'PCK', 'GW', 'Breakdown', 'Amount']];
     let body = [];
     
     if (invoice.lineItems && invoice.lineItems.length > 0) {
-      body = invoice.lineItems.map((item: any) => [
-        item.flightDate ? new Date(item.flightDate).toLocaleDateString() : '-',
-        `${item.reference || 'N/A'}\n${localize(item.description)}\nDec: ${item.declarationMethod || '-'}`,
-        item.pieces || '-',
-        item.weight ? `${item.weight.toLocaleString()} KG` : '-',
-        item.chargeableWeight ? `${item.chargeableWeight.toLocaleString()} KG` : '-',
-        `${invoice.currency} ${item.amount.toLocaleString()}`
-      ]);
+      body = invoice.lineItems.map((item: any) => {
+        const cw = item.chargeableWeight || 0;
+        const customs = item.customsClearance;
+        const miscText = (item.miscFees || []).map((m: any) => `${m.name}: ${m.amount} (${m.unit === 'per_kg' ? 'KG' : 'Ship'})`).join('\n');
+        
+        const fuelVal = Number(item.fuelSurcharge) || 0;
+        const secVal = Number(item.securityScreening) || 0;
+        const termVal = Number(item.terminalHandling) || 0;
+        const cusVal = Number(customs?.amount) || 0;
+        const unitPrice = Number(item.unitPrice) || 0;
+
+        const breakdown = `Freight: ${unitPrice.toFixed(2)}/kg\nFuel: ${fuelVal}/kg\nSec: ${secVal}/kg\nTerm: ${termVal}/kg\nCus: ${cusVal} (${customs?.unit === 'per_kg' ? 'KG' : 'Ship'})\n${miscText}`;
+
+        return [
+          item.flightDate ? new Date(item.flightDate).toLocaleDateString() : '-',
+          `${item.reference || 'N/A'}\n${localize(item.description)}\nDec: ${item.declarationMethod || '-'}`,
+          item.pieces || '-',
+          `${item.weight?.toLocaleString() || '-'} KG\n(CW: ${item.chargeableWeight?.toLocaleString() || '-'} KG)`,
+          breakdown,
+          `${invoice.currency} ${item.amount.toLocaleString()}`
+        ];
+      });
     } else {
       body = [[
         '-',
@@ -77,10 +91,41 @@ export const PDFService = {
       head: head,
       body: body,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
+      styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { fillColor: [37, 99, 235], halign: 'center' },
       columnStyles: {
+        4: { fontStyle: 'italic', fontSize: 6 },
         5: { halign: 'right', fontStyle: 'bold' }
+      },
+      didDrawCell: (data: any) => {
+        // Customize Breakdown column (index 4)
+        if (data.column.index === 4 && data.cell.section === 'body') {
+          const { cell, doc } = data;
+          const text = cell.text ? cell.text.join('\n') : '';
+          const lines = text.split('\n');
+          
+          if (lines.length > 0 && lines[0].startsWith('Freight:')) {
+            // Fill background
+            doc.setFillColor(255, 255, 255);
+            doc.rect(cell.x + 0.1, cell.y + 0.1, cell.width - 0.2, cell.height - 0.2, 'F');
+
+            // Draw Freight line (larger, bold, blue)
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(37, 99, 235);
+            doc.text(lines[0], cell.x + 2, cell.y + 4);
+
+            // Draw rest of breakdown
+            doc.setFontSize(6);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(100, 116, 139);
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i]) {
+                doc.text(lines[i], cell.x + 2, cell.y + 4 + (i * 3));
+              }
+            }
+          }
+        }
       }
     });
     
@@ -147,16 +192,22 @@ export const PDFService = {
         const miscText = (r.miscFees || []).map((m: any) => `${m.name}: ${m.amount} (${m.unit === 'per_kg' ? 'KG' : 'Ship'})`).join('\n');
         
         // Calculate dynamic freight breakdown
-        const freightPart = r.finalPrice - (r.fuel||0) - (r.security||0) - (r.terminal||0) - 
-          (customs?.unit === 'per_kg' ? (customs.amount||0) : 0) -
-          (r.miscFees || []).reduce((sum: number, m: any) => m.unit === 'per_kg' ? sum + m.amount : sum, 0);
+        const freightVal = Number(r.finalPrice) || 0;
+        const fuelVal = Number(r.fuel) || 0;
+        const secVal = Number(r.security) || 0;
+        const termVal = Number(r.terminal) || 0;
+        const cusVal = Number(customs?.amount) || 0;
+        const miskKgSum = (r.miscFees || []).reduce((sum: number, m: any) => m.unit === 'per_kg' ? sum + (Number(m.amount) || 0) : sum, 0);
+
+        const freightPart = freightVal - fuelVal - secVal - termVal - 
+          (customs?.unit === 'per_kg' ? cusVal : 0) - miskKgSum;
 
         return [
           r.origin,
           r.destination,
           r.carrier,
-          `Freight: ${freightPart.toFixed(2)}\nFuel: ${r.fuel||0}\nSec: ${r.security||0}\nTerm: ${r.terminal||0}\nCus: ${customs?.amount||0} (${customs?.unit === 'per_kg' ? 'KG' : 'Ship'})\n${miscText}`,
-          `${quotation.currency} ${r.finalPrice.toFixed(2)} / KG` + (r.flatFees > 0 ? `\n+ ${r.currency} ${r.flatFees} (Flat)` : '')
+          `Freight: ${freightPart.toFixed(2)}\nFuel: ${fuelVal}\nSec: ${secVal}\nTerm: ${termVal}\nCus: ${cusVal} (${customs?.unit === 'per_kg' ? 'KG' : 'Ship'})\n${miscText}`,
+          `${quotation.currency} ${freightVal.toFixed(2)} / KG` + (r.flatFees > 0 ? `\n+ ${quotation.currency} ${r.flatFees} (Flat)` : '')
         ];
       }),
       styles: { fontSize: 7, cellPadding: 2 },
@@ -165,6 +216,48 @@ export const PDFService = {
       columnStyles: {
         3: { fontStyle: 'italic', fontSize: 6 },
         4: { halign: 'right', fontStyle: 'bold' }
+      },
+      didDrawCell: (data: any) => {
+        // Customize Breakdown column (index 3)
+        if (data.column.index === 3 && data.cell.section === 'body') {
+          const { cell, doc } = data;
+          const text = cell.text ? cell.text.join('\n') : '';
+          const lines = text.split('\n');
+          
+          if (lines.length > 0) {
+            // Fill background to "clear" default text
+            const fill = cell.styles.fillColor;
+            if (Array.isArray(fill)) {
+              doc.setFillColor(fill[0] ?? 255, fill[1] ?? 255, fill[2] ?? 255);
+            } else if (typeof fill === 'number') {
+              doc.setFillColor(fill);
+            } else {
+              doc.setFillColor(255, 255, 255);
+            }
+            
+            // Validate coordinates
+            const x = Number(cell.x) || 0;
+            const y = Number(cell.y) || 0;
+            const w = Number(cell.width) || 0;
+            const h = Number(cell.height) || 0;
+
+            doc.rect(x + 0.1, y + 0.1, w - 0.2, h - 0.2, 'F');
+
+            // Draw Freight line (larger, bold, blue)
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(25, 118, 210);
+            doc.text(lines[0] || '', x + 2, y + 4.5);
+
+            // Draw rest of breakdown (standard style)
+            doc.setFontSize(6);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(100, 116, 139);
+            for (let i = 1; i < lines.length; i++) {
+              doc.text(lines[i] || '', x + 2, y + 5.5 + (i * 3));
+            }
+          }
+        }
       }
     });
 
