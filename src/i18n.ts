@@ -98,7 +98,8 @@ const resources = {
           "warehouse_in": "Whse Entry Confirmed",
           "customs": "Customs Cleared",
           "on_hold": "Hold",
-          "waitClientAccept": "Waiting for client acceptance"
+          "waitClientAccept": "Waiting for client acceptance",
+          "closed": "Closed"
         }
       },
       "dashboard": {
@@ -226,6 +227,12 @@ const resources = {
         "accountsReceivable": "Accounts Receivable",
         "accountsPayable": "Accounts Payable",
         "profitAnalysis": "Profit Analysis",
+        "statuses": {
+          "pending": "Pending",
+          "invoiced": "Invoiced",
+          "paid": "Paid",
+          "issued": "Issued"
+        },
         "activeInvoices": "Active Invoices",
         "pendingAR": "Pending AR items",
         "pendingAP": "Pending AP items",
@@ -273,6 +280,11 @@ const resources = {
         "role": "System Role",
         "rights": "Regional Rights",
         "status": "Current Status",
+        "statuses": {
+          "approved": "Approved",
+          "pending": "Pending",
+          "rejected": "Rejected"
+        },
         "actions": "Actions",
         "roles": {
           "admin": "Admin",
@@ -470,7 +482,8 @@ const resources = {
           "warehouse_in": "入仓确认",
           "customs": "报关完成",
           "on_hold": "挂起",
-          "waitClientAccept": "等待客户确认"
+          "waitClientAccept": "等待客户确认",
+          "closed": "已结算"
         }
       },
       "dashboard": {
@@ -598,6 +611,12 @@ const resources = {
         "accountsReceivable": "应收账款",
         "accountsPayable": "应付账款",
         "profitAnalysis": "盈亏分析",
+        "statuses": {
+          "pending": "待处理",
+          "invoiced": "已开票",
+          "paid": "已支付",
+          "issued": "已开票"
+        },
         "activeInvoices": "当前发票",
         "pendingAR": "待入账应收",
         "pendingAP": "待入账应付",
@@ -645,6 +664,11 @@ const resources = {
         "role": "系统角色",
         "rights": "区域权限",
         "status": "当前状态",
+        "statuses": {
+          "approved": "已批准",
+          "pending": "待审核",
+          "rejected": "已拒绝"
+        },
         "actions": "操作",
         "roles": {
           "admin": "管理员",
@@ -754,7 +778,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'zh',
+    fallbackLng: 'en',
     interpolation: {
       escapeValue: false,
     },

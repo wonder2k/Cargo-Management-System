@@ -214,7 +214,7 @@ export const InvoiceList: React.FC = () => {
       dataIndex: 'status',
       render: (status: string) => (
         <Tag color={status === 'invoiced' ? 'blue' : 'orange'}>
-          {(status || 'pending').toUpperCase()}
+          {t(`finance.statuses.${status || 'pending'}`)}
         </Tag>
       )
     },
@@ -256,7 +256,7 @@ export const InvoiceList: React.FC = () => {
       dataIndex: 'status',
       render: (status: string) => (
         <Tag color={status === 'paid' ? 'success' : 'warning'}>
-          {(status || 'pending').toUpperCase()}
+          {t(`finance.statuses.${status || 'pending'}`)}
         </Tag>
       )
     },
@@ -366,7 +366,7 @@ export const InvoiceList: React.FC = () => {
                 { 
                   title: t('finance.status'), 
                   dataIndex: 'status',
-                  render: (s: InvoiceStatus) => <Tag color={s === 'paid' ? 'success' : 'processing'}>{s.toUpperCase()}</Tag>
+                  render: (s: InvoiceStatus) => <Tag color={s === 'paid' ? 'success' : 'processing'}>{t(`finance.statuses.${s}`)}</Tag>
                 },
                 {
                   title: t('finance.actions'),

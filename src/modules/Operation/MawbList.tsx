@@ -383,6 +383,12 @@ export const MawbList: React.FC = () => {
   const handleUploadDraft = async (values: any) => {
     if (!selectedMawb) return;
     try {
+      // Update MAWB with ETD and ETA
+      await updateDoc(doc(db, 'mawbs', selectedMawb.id), {
+        etd: values.etd?.toISOString(),
+        eta: values.eta?.toISOString()
+      });
+
       const q = query(collection(db, 'bookings'), where('mawbNo', '==', selectedMawb.internalMawbNo));
       const bookingSnap = await getDocs(q);
       if (!bookingSnap.empty) {
@@ -1010,6 +1016,12 @@ export const MawbList: React.FC = () => {
         onOk={() => draftForm.submit()}
       >
         <Form form={draftForm} layout="vertical" onFinish={handleUploadDraft}>
+          <Form.Item label="ETD" name="etd" rules={[{ required: true }]}>
+            <DatePicker showTime className="w-full" />
+          </Form.Item>
+          <Form.Item label="ETA" name="eta" rules={[{ required: true }]}>
+            <DatePicker showTime className="w-full" />
+          </Form.Item>
           <Form.Item label={t('operation.steps.draft')} required>
              <Upload 
                maxCount={1}

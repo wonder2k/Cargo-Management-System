@@ -57,6 +57,15 @@ export const MainLayout: React.FC = () => {
       icon: <Users size={14} />,
       onClick: () => navigate('/profile')
     },
+    {
+      key: 'simulate_yuntong',
+      label: 'Simulate: 广州运通',
+      icon: <Users size={14} />,
+      onClick: () => {
+        localStorage.setItem('simulation_user', '广州运通');
+        window.location.reload();
+      }
+    },
     { 
       type: 'divider',
       key: 'd1'

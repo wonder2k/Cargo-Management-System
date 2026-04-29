@@ -222,7 +222,7 @@ export const UserManagement: React.FC = () => {
                 };
                 return (
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${styles[status]}`}>
-                    {status}
+                    {t(`users.statuses.${status}`)}
                   </span>
                 );
               }

@@ -25,7 +25,7 @@ const MAWB_STATUSES: { value: string; labelKey: string; color: string }[] = [
   { value: 'terminal_in', labelKey: 'operation.setTerminalIn', color: 'purple' },
   { value: 'departed', labelKey: 'booking.status.departed', color: 'blue' },
   { value: 'arrived', labelKey: 'booking.status.arrived', color: 'green' },
-  { value: 'closed', labelKey: 'operation.financeSettlement', color: '#8c8c8c' },
+  { value: 'closed', labelKey: 'booking.status.closed', color: '#8c8c8c' },
   { value: 'exception', labelKey: 'operation.exception', color: 'red' },
   { value: 'on_hold', labelKey: 'booking.status.on_hold', color: 'volcano' },
   { value: 'client_accepted', labelKey: 'booking.status.client_accepted', color: 'processing' },
@@ -100,7 +100,16 @@ export const BookingList: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     const rate = rates.find(r => r.id === values.rateId);
-    if (!rate) return;
+    const customer = customers.find(c => c.id === values.customerId);
+    if (!rate || !customer) return;
+
+    const tier = customer.tier || 0;
+    const floorPrice = rate.baseFreight + (values.currency === 'CNY' ? 0.5 : 0.2) * tier;
+    
+    if (values.unitPrice < floorPrice) {
+      message.error(`Unit price cannot be lower than floor price: ${floorPrice.toFixed(2)} ${values.currency}`);
+      return;
+    }
 
     try {
       const cleanedCostPrice = (typeof rate.baseFreight === 'number') ? rate.baseFreight : 0;
@@ -196,9 +205,7 @@ export const BookingList: React.FC = () => {
   };
 
   const getStatusTag = (status: BookingStatus | MawbStatus) => {
-    const s = MAWB_STATUSES.find(x => x.value === status);
-    if (!s) return <Tag>{status}</Tag>;
-    return <Tag color={s.color} className="font-medium px-3 py-0.5 rounded-full">{t(s.labelKey)}</Tag>;
+    return <Tag color={MAWB_STATUSES.find(x => x.value === status)?.color || 'default'} className="font-medium px-3 py-0.5 rounded-full">{t(`booking.status.${status}`)}</Tag>;
   };
 
   const handleBookingAction = async (id: string, newStatus: BookingStatus, extraData: any = {}) => {

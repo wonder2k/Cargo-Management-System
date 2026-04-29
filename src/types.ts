@@ -39,6 +39,7 @@ export interface Customer {
   paymentTerms: PaymentTerm;
   email?: string;
   status: 'active' | 'frozen';
+  tier?: number; // 0-10
 }
 
 export type FeeUnit = 'per_kg' | 'per_shipment';

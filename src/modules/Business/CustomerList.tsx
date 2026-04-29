@@ -202,14 +202,17 @@ export const CustomerList: React.FC = () => {
             { 
               title: <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customers.type')}</span>, 
               dataIndex: 'type', 
-              render: (type: string) => (
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                  type === 'direct' ? 'bg-cyan-100 text-cyan-700' : 
-                  type === 'local_agent' ? 'bg-purple-100 text-purple-700' : 
-                  'bg-indigo-100 text-indigo-700'
-                }`}>
-                  {t(`customers.types.${type}` as any)}
-                </span>
+              render: (type: string, record: Customer) => (
+                <Space direction="vertical" size={2}>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    type === 'direct' ? 'bg-cyan-100 text-cyan-700' : 
+                    type === 'local_agent' ? 'bg-purple-100 text-purple-700' : 
+                    'bg-indigo-100 text-indigo-700'
+                  }`}>
+                    {t(`customers.types.${type}` as any)}
+                  </span>
+                  <span className="text-[10px] text-slate-500">Tier: {record.tier || 0}</span>
+                </Space>
               )
             },
             { 
@@ -370,6 +373,9 @@ export const CustomerList: React.FC = () => {
 
           <Form.Item name="email" label={t('customers.billingEmail')}>
             <Input placeholder="finance@company.com" />
+          </Form.Item>
+          <Form.Item name="tier" label="Tier (0-10)" initialValue={0}>
+            <InputNumber min={0} max={10} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>

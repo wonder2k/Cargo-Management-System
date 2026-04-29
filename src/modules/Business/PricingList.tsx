@@ -31,15 +31,12 @@ export const PricingList: React.FC = () => {
   const { message } = App.useApp();
 
   const fetchRates = async () => {
-    setLoading(true);
     try {
       const q = query(collection(db, 'flight-rates'), orderBy('lastUpdated', 'desc'));
       const snapshot = await getDocs(q);
       setRates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FlightRate)));
     } catch (e) {
       message.error(t('common.error') + ': Failed to load rates');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -52,8 +49,12 @@ export const PricingList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRates();
-    fetchCustomers();
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRates(), fetchCustomers()]);
+      setLoading(false);
+    };
+    fetchData();
   }, []);
 
   const handleCreateOrUpdate = async (values: any) => {
@@ -95,93 +96,6 @@ export const PricingList: React.FC = () => {
     }
   };
 
-  const calculateFinalPrice = (rate: FlightRate) => {
-    const freight = rate.baseFreight;
-    const adjustedFreight = adjustmentType === 'manual' 
-      ? (customPrices[rate.id] || freight) 
-      : (adjustmentType === 'percent' ? freight * (1 + adjustmentValue / 100) : freight + adjustmentValue);
-    
-    // Add surcharges
-    const fuel = rate.fuelSurcharge || 0;
-    const security = rate.securityScreening || 0;
-    const terminal = rate.terminalHandling || 0;
-    
-    // For general display, we use 'formal' customs method as default or the legacy field
-    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
-    const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
-    
-    // Sum all per_kg miscFees
-    const miscPerKgAmount = (rate.miscFees || []).reduce((sum, item) => 
-      item.unit === 'per_kg' ? sum + item.amount : sum, 0);
-    
-    return adjustedFreight + fuel + security + terminal + customsAmount + miscPerKgAmount;
-  };
-
-  const getFlatFees = (rate: FlightRate) => {
-    let total = 0;
-    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
-    if (formalCustoms?.unit === 'per_shipment') total += formalCustoms.amount;
-    
-    // Sum all per_shipment miscFees
-    const miscFlatAmount = (rate.miscFees || []).reduce((sum, item) => 
-      item.unit === 'per_shipment' ? sum + item.amount : sum, 0);
-    
-    total += miscFlatAmount;
-    return total;
-  };
-
-  const handleOpenPreview = async (values: any) => {
-    const selectedRates = rates.filter(r => selectedRateIds.includes(r.id));
-    if (selectedRates.length === 0) return;
-
-    const customer = customers.find(c => c.id === values.customerId);
-    const quotationNo = `QT-${Date.now().toString().slice(-6)}`;
-    
-    // Validate manual prices
-    if (adjustmentType === 'manual') {
-      const invalid = selectedRates.some(r => (customPrices[r.id] || 0) < r.baseFreight);
-      if (invalid) {
-         message.error(t('pricing.errors.lowPrice'));
-         return;
-      }
-    }
-
-    const quotationData = {
-      quotationNo,
-      customerId: values.customerId,
-      customerName: customer?.name || 'Walk-in Client',
-      recipientInfo: values.recipientInfo || '',
-      routes: selectedRates.map(r => ({
-        id: r.id,
-        origin: r.origin,
-        destination: r.destination,
-        carrier: r.carrier,
-        basePrice: r.baseFreight,
-        finalPrice: calculateFinalPrice(r),
-        adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
-                   adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual',
-        fuel: r.fuelSurcharge,
-        security: r.securityScreening,
-        terminal: r.terminalHandling,
-        customs: r.customsMethods?.['formal'] || r.customsClearance,
-        other: r.otherCharges,
-        customsMethods: r.customsMethods,
-        miscFees: r.miscFees,
-        flatFees: getFlatFees(r)
-      })),
-      currency: selectedRates[0].currency,
-      validUntil: values.validUntil,
-      status: 'sent',
-      createdAt: new Date().toISOString(),
-      createdBy: profile?.uid,
-      userName: profile?.displayName || 'System User',
-      downloadCount: 1
-    };
-
-    setPendingQuotation(quotationData);
-    setQuoteModalOpen(false);
-    setPreviewModalOpen(true);
-  };
 
   const handleFinalConfirm = async () => {
     if (!pendingQuotation) return;
@@ -239,6 +153,117 @@ export const PricingList: React.FC = () => {
   };
 
   const isAdmin = profile?.role === 'admin';
+  const isAgent = (profile?.role === 'business') || !!localStorage.getItem('simulation_user');
+  const agentCustomer = customers.find(c => c.name === (localStorage.getItem('simulation_user') || profile?.companyName));
+
+  const calculateFinalPrice = (rate: FlightRate, customer?: Customer) => {
+    let freight = rate.baseFreight;
+    
+    // Apply tier if customer is provided OR if it's an agent using their own base price basis
+    // For agents, we use their own tier for the base price calculation
+    const effectiveTier = customer?.tier || (agentCustomer?.tier || 0);
+    
+    if (effectiveTier) {
+        freight += (rate.currency === 'CNY' ? 0.5 : 0.2) * effectiveTier;
+    }
+
+    const adjustedFreight = adjustmentType === 'manual' 
+      ? (customPrices[rate.id] || freight) 
+      : (adjustmentType === 'percent' ? freight * (1 + adjustmentValue / 100) : freight + adjustmentValue);
+    
+    // Add surcharges
+    const fuel = rate.fuelSurcharge || 0;
+    const security = rate.securityScreening || 0;
+    const terminal = rate.terminalHandling || 0;
+    
+    // For general display, we use 'formal' customs method as default or the legacy field
+    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
+    const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
+    
+    // Sum all per_kg miscFees
+    const miscPerKgAmount = (rate.miscFees || []).reduce((sum, item) => 
+      item.unit === 'per_kg' ? sum + item.amount : sum, 0);
+    
+    return adjustedFreight + fuel + security + terminal + customsAmount + miscPerKgAmount;
+  };
+
+  const getFlatFees = (rate: FlightRate) => {
+    let total = 0;
+    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
+    if (formalCustoms?.unit === 'per_shipment') total += formalCustoms.amount;
+    
+    // Sum all per_shipment miscFees
+    const miscFlatAmount = (rate.miscFees || []).reduce((sum, item) => 
+      item.unit === 'per_shipment' ? sum + item.amount : sum, 0);
+    
+    total += miscFlatAmount;
+    return total;
+  };
+
+  const handleOpenPreview = async (values: any) => {
+    const selectedRates = rates.filter(r => selectedRateIds.includes(r.id));
+    if (selectedRates.length === 0) return;
+
+    let customer;
+    let customerName = 'Walk-in Client';
+    let recipientInfo = values.recipientInfo || '';
+
+    if (isAgent) {
+        customerName = values.manualCustomerName || 'Walk-in Client';
+        recipientInfo = values.manualRecipientInfo || '';
+    } else {
+        customer = customers.find(c => c.id === values.customerId);
+        customerName = customer?.name || 'Walk-in Client';
+        recipientInfo = values.recipientInfo || '';
+    }
+
+    const quotationNo = `QT-${Date.now().toString().slice(-6)}`;
+    
+    // Validate manual prices
+    if (adjustmentType === 'manual') {
+      const invalid = selectedRates.some(r => (customPrices[r.id] || 0) < r.baseFreight);
+      if (invalid) {
+         message.error(t('pricing.errors.lowPrice'));
+         return;
+      }
+    }
+
+    const quotationData = {
+      quotationNo,
+      customerId: customer?.id || 'agent',
+      customerName: customerName,
+      recipientInfo: recipientInfo,
+      routes: selectedRates.map(r => ({
+        id: r.id,
+        origin: r.origin,
+        destination: r.destination,
+        carrier: r.carrier,
+        basePrice: r.baseFreight,
+        finalPrice: calculateFinalPrice(r, customer || agentCustomer),
+        adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
+                   adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual',
+        fuel: r.fuelSurcharge,
+        security: r.securityScreening,
+        terminal: r.terminalHandling,
+        customs: r.customsMethods?.['formal'] || r.customsClearance,
+        other: r.otherCharges,
+        customsMethods: r.customsMethods,
+        miscFees: r.miscFees,
+        flatFees: getFlatFees(r)
+      })),
+      currency: selectedRates[0].currency,
+      validUntil: values.validUntil,
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+      createdBy: profile?.uid,
+      userName: profile?.displayName || 'System User',
+      downloadCount: 1
+    };
+
+    setPendingQuotation(quotationData);
+    setQuoteModalOpen(false);
+    setPreviewModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -487,14 +512,25 @@ export const PricingList: React.FC = () => {
         width={600}
       >
         <Form form={quoteForm} layout="vertical" onFinish={handleOpenPreview}>
-          <Form.Item name="customerId" label={t('pricing.customerName')} rules={[{ required: true }]}>
-            <Select 
-                showSearch
-                placeholder={t('common.search')}
-                optionFilterProp="children"
-                options={customers.map(c => ({ label: `${c.code} - ${c.name}`, value: c.id }))}
-            />
-          </Form.Item>
+          {isAgent ? (
+            <>
+              <Form.Item name="manualCustomerName" label={t('pricing.customerName')} rules={[{ required: true }]}>
+                <Input placeholder="Enter Customer Name" />
+              </Form.Item>
+              <Form.Item name="manualRecipientInfo" label={t('pricing.recipient')} rules={[{ required: true }]}>
+                  <Input.TextArea placeholder="Contact Person, Phone..." rows={3} />
+              </Form.Item>
+            </>
+          ) : (
+            <Form.Item name="customerId" label={t('pricing.customerName')} rules={[{ required: true }]}>
+              <Select 
+                  showSearch
+                  placeholder={t('common.search')}
+                  optionFilterProp="children"
+                  options={customers.map(c => ({ label: `${c.code} - ${c.name}`, value: c.id }))}
+              />
+            </Form.Item>
+          )}
           <Form.Item name="recipientInfo" label={t('pricing.recipient')}>
              <Input.TextArea placeholder="Mr. Chen\nABC Logistics\n+86 139..." rows={3} />
           </Form.Item>
