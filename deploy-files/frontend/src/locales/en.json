@@ -1,0 +1,26 @@
+{
+  "common": {
+    "login": "Login",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "operations": "Operations",
+    "finance": "Finance",
+    "business": "Business",
+    "loading": "Loading...",
+    "search": "Search",
+    "actions": "Actions"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "signIn": "Sign In",
+    "error": "Invalid email or password"
+  },
+  "operations": {
+    "mawbList": "MAWB List",
+    "createMAWB": "Add MAWB",
+    "mawbNo": "MAWB No",
+    "status": "Status"
+  }
+}

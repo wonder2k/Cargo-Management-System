@@ -1,0 +1,26 @@
+{
+  "common": {
+    "login": "登录",
+    "logout": "退出登录",
+    "dashboard": "仪表盘",
+    "operations": "操作部",
+    "finance": "财务部",
+    "business": "商务部",
+    "loading": "加载中...",
+    "search": "查询",
+    "actions": "操作"
+  },
+  "auth": {
+    "email": "邮箱",
+    "password": "密码",
+    "forgotPassword": "忘记密码？",
+    "signIn": "立即登录",
+    "error": "邮箱或密码错误"
+  },
+  "operations": {
+    "mawbList": "总单列表",
+    "createMAWB": "新增总单",
+    "mawbNo": "总单号",
+    "status": "状态"
+  }
+}
