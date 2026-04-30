@@ -1,5 +1,5 @@
-import { pgTable, serial, text, timestamp, doublePrecision, varchar, jsonb, boolean } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, serial, text, timestamp, doublePrecision, varchar, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import { relations, eq } from "drizzle-orm";
 
 // 1. Users Table
 export const users = pgTable("users", {
@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   role: varchar("role", { length: 50 }).default("viewer"), // admin, sales, ops, finance
   avatarUrl: text("avatar_url"),
-  tier: serial("tier").default(0),
+  tier: integer("tier").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -23,8 +23,8 @@ export const customers = pgTable("customers", {
   phone: varchar("phone", { length: 50 }),
   creditLimit: doublePrecision("credit_limit").default(0),
   balance: doublePrecision("balance").default(0),
-  tier: serial("tier").default(0),
-  creatorId: serial("creator_id").references(() => users.id),
+  tier: integer("tier").default(0),
+  creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -39,7 +39,7 @@ export const mawbs = pgTable("mawbs", {
   weight: doublePrecision("weight"),
   volume: doublePrecision("volume"),
   chargeableWeight: doublePrecision("chargeable_weight"),
-  pieces: serial("pieces"),
+  pieces: integer("pieces"),
   flightDate: timestamp("flight_date"),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -48,8 +48,8 @@ export const mawbs = pgTable("mawbs", {
 // 4. Accounts Receivable (AR)
 export const accountsReceivable = pgTable("accounts_receivable", {
   id: serial("id").primaryKey(),
-  mawbId: serial("mawb_id").references(() => mawbs.id),
-  customerId: serial("customer_id").references(() => customers.id),
+  mawbId: integer("mawb_id").references(() => mawbs.id),
+  customerId: integer("customer_id").references(() => customers.id),
   invoiceNo: varchar("invoice_no", { length: 100 }),
   totalAmount: doublePrecision("total_amount").notNull(),
   currency: varchar("currency", { length: 10 }).default("CNY"),
@@ -66,7 +66,7 @@ export const documents = pgTable("documents", {
   fileName: text("file_name").notNull(),
   filePath: text("file_path").notNull(),
   referenceId: varchar("reference_id", { length: 100 }), // mawbNo or invoiceNo
-  uploadedBy: serial("uploaded_by").references(() => users.id),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
