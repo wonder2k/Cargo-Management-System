@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { mawbs } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
