@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, theme, Space } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, theme, Space, Tag } from 'antd';
 import { 
   BarChart2, 
   Users, 
@@ -46,9 +46,14 @@ export const MainLayout: React.FC = () => {
     { key: '/users', icon: <ShieldAlert size={18} />, label: t('menu.users'), roles: ['admin'] },
   ];
 
-  const filteredItems = menuItems.filter(item => 
-    profile && item.roles.includes(profile.role)
-  );
+  const userRole = profile?.role?.toLowerCase() || '';
+  const isAdmin = userRole === 'admin';
+  const isSimulation = !!localStorage.getItem('simulation_user');
+
+  const filteredItems = menuItems.filter(item => {
+    if (!profile) return false;
+    return item.roles.some(r => r.toLowerCase() === userRole);
+  });
 
   const userMenuItems: any[] = [
     { 
@@ -57,6 +62,16 @@ export const MainLayout: React.FC = () => {
       icon: <Users size={14} />,
       onClick: () => navigate('/profile')
     },
+    ...(isAdmin && isSimulation ? [{
+      key: 'stop_simulation',
+      label: 'Exit Simulation (Admin)',
+      danger: true,
+      icon: <LogOut size={14} />,
+      onClick: () => {
+        localStorage.removeItem('simulation_user');
+        window.location.reload();
+      }
+    }] : []),
     {
       key: 'simulate_yuntong',
       label: 'Simulate: 广州运通',
@@ -74,7 +89,10 @@ export const MainLayout: React.FC = () => {
       key: 'logout', 
       label: t('app.logout'), 
       icon: <LogOut size={14} />,
-      onClick: logout 
+      onClick: () => {
+        localStorage.removeItem('simulation_user');
+        logout();
+      } 
     },
   ];
 
@@ -177,7 +195,12 @@ export const MainLayout: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 24, borderLeft: '1px solid #e2e8f0' }}>
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-800 leading-tight">{profile?.displayName}</p>
-                <p className="text-xs text-slate-500 capitalize">{profile?.role} Manager</p>
+                <div className="flex items-center justify-end gap-1">
+                  <p className="text-xs text-slate-500 capitalize">{profile?.role}</p>
+                  {profile?.tier !== undefined && (
+                    <Tag color="blue" className="text-[9px] px-1 py-0 m-0">T{profile.tier}</Tag>
+                  )}
+                </div>
               </div>
               <Dropdown menu={{ items: userMenuItems }}>
                 <div style={{ cursor: 'pointer' }}>

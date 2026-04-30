@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Tag, App, Select, Space, Card, Typography } from 'antd';
+import { Table, Button, Tag, App, Select, Space, Card, Typography, InputNumber } from 'antd';
 import { collection, query, getDocs, updateDoc, doc, orderBy, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { UserProfile, Role, UserStatus } from '../../types';
@@ -182,6 +182,30 @@ export const UserManagement: React.FC = () => {
                     { label: t('users.roles.operation'), value: 'operation' },
                     { label: t('users.roles.finance'), value: 'finance' }
                   ]}
+                />
+              )
+            },
+            {
+              title: <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Tier (0-10)</span>,
+              dataIndex: 'tier',
+              render: (tier: number, record) => (
+                <InputNumber 
+                  min={0} 
+                  max={10} 
+                  size="small"
+                  value={tier || 0}
+                  className="w-16"
+                  onChange={async (v) => {
+                    if (v !== null) {
+                      try {
+                        await updateDoc(doc(db, 'users', record.uid), { tier: v });
+                        message.success('Tier updated');
+                        fetchUsers();
+                      } catch (err: any) {
+                        message.error('Failed to update tier: ' + err.message);
+                      }
+                    }
+                  }}
                 />
               )
             },

@@ -315,7 +315,59 @@ export const MawbList: React.FC = () => {
                         };
 
                         const apAmount = calculateCost(bookingData);
+                        const q = (bookingData as any).warehouseInfo?.chargeableWeight || bookingData.weight;
                         
+                        // Build line items for breakdown with quantity and unit price
+                        const apLineItems = [
+                          { 
+                            name: 'Air Freight', 
+                            quantity: q,
+                            unitPrice: bookingData.costPrice || (bookingData.unitPrice * 0.85),
+                            amount: (bookingData.costPrice || bookingData.unitPrice * 0.85) * q 
+                          },
+                          { 
+                            name: 'Fuel Surcharge', 
+                            quantity: q, 
+                            unitPrice: bookingData.fuelSurcharge || 0,
+                            amount: (bookingData.fuelSurcharge || 0) * q 
+                          },
+                          { 
+                            name: 'Security Screening', 
+                            quantity: q,
+                            unitPrice: bookingData.securityScreening || 0,
+                            amount: (bookingData.securityScreening || 0) * q 
+                          },
+                          { 
+                            name: 'Terminal Handling', 
+                            quantity: q,
+                            unitPrice: bookingData.terminalHandling || 0,
+                            amount: (bookingData.terminalHandling || 0) * q 
+                          },
+                        ];
+
+                        const customs = bookingData.customsMethods?.[bookingData.declarationMethod] || bookingData.customsClearance;
+                        if (customs) {
+                           const customsQty = customs.unit === 'per_kg' ? q : 1;
+                           apLineItems.push({ 
+                             name: `Customs (${bookingData.declarationMethod})`, 
+                             quantity: customsQty,
+                             unitPrice: customs.amount,
+                             amount: customs.amount * customsQty
+                           });
+                        }
+                        
+                        if (bookingData.miscFees && bookingData.miscFees.length > 0) {
+                          bookingData.miscFees.forEach(fee => {
+                            const feeQty = fee.unit === 'per_kg' ? q : 1;
+                            apLineItems.push({
+                              name: fee.name,
+                              quantity: feeQty,
+                              unitPrice: fee.amount,
+                              amount: fee.amount * feeQty
+                            });
+                          });
+                        }
+
                         const apData = cleanFirestoreData({
                             mawbNo: targetMawb.internalMawbNo,
                             vendorName: targetMawb.carrier || 'Carrier',
@@ -327,7 +379,8 @@ export const MawbList: React.FC = () => {
                             flightDate: bookingData.flightDate,
                             totalAmount: apAmount,
                             currency: bookingData.currency,
-                            // Breakdown fields
+                            lineItems: apLineItems,
+                            // Breakdown fields (backward compatibility/direct access)
                             fuelSurcharge: bookingData.fuelSurcharge,
                             securityScreening: bookingData.securityScreening,
                             terminalHandling: bookingData.terminalHandling,
@@ -399,8 +452,11 @@ export const MawbList: React.FC = () => {
         message.success(t('common.success'));
         setDraftModalOpen(false);
         fetchData();
+      } else {
+        message.error('Associated booking not found');
       }
     } catch (e) {
+      console.error('Draft upload error:', e);
       message.error(t('common.error'));
     }
   };
@@ -608,6 +664,7 @@ export const MawbList: React.FC = () => {
                                  if (hasDraft && b?.draftMawbUrl) {
                                    triggerDownload(b.draftMawbUrl);
                                  } else if (b) {
+                                   setSelectedMawb(r);
                                    setSelectedBooking(b);
                                    draftForm.setFieldsValue({ draftMawbUrl: `${r.internalMawbNo}_Draft.pdf` });
                                    setDraftModalOpen(true);
@@ -1017,10 +1074,10 @@ export const MawbList: React.FC = () => {
       >
         <Form form={draftForm} layout="vertical" onFinish={handleUploadDraft}>
           <Form.Item label="ETD" name="etd" rules={[{ required: true }]}>
-            <DatePicker showTime className="w-full" />
+            <DatePicker showTime={{ format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" className="w-full" />
           </Form.Item>
           <Form.Item label="ETA" name="eta" rules={[{ required: true }]}>
-            <DatePicker showTime className="w-full" />
+            <DatePicker showTime={{ format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" className="w-full" />
           </Form.Item>
           <Form.Item label={t('operation.steps.draft')} required>
              <Upload 

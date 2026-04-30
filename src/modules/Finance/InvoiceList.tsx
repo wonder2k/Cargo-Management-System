@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Tabs, Drawer, Upload, Tooltip, DatePicker } from 'antd';
+import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Tabs, Drawer, Upload, Tooltip, DatePicker, Row, Col } from 'antd';
 import { collection, query, getDocs, updateDoc, doc, addDoc, orderBy, where, writeBatch } from 'firebase/firestore';
 import { db, cleanFirestoreData, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Invoice, InvoiceStatus, Customer, MAWB, AccountsPayable } from '../../types';
@@ -30,6 +30,7 @@ export const InvoiceList: React.FC = () => {
   const { profile } = useAuth();
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  const [apForm] = Form.useForm();
   const [payForm] = Form.useForm();
   const { message } = App.useApp();
 
@@ -562,47 +563,254 @@ export const InvoiceList: React.FC = () => {
       </Modal>
 
       <Drawer
-        title="Edit AP Details"
+        title={`AP Details: ${editingAP?.mawbNo}`}
         open={!!editingAP}
         onClose={() => setEditingAP(null)}
-        width={500}
+        width={600}
+        destroyOnClose
       >
         {editingAP && (
-          <Form initialValues={editingAP} onFinish={async (values) => {
-            await updateDoc(doc(db, 'accountsPayable', editingAP.id), values);
-            message.success('Updated');
-            setEditingAP(null);
-            fetchData();
-          }}>
-            <Form.List name="lineItems">
-              {(fields, { add, remove }) => (
-                <>
-                  <div className="mb-4">
-                    {editingAP.lineItems?.map((item, index) => (
-                      <div key={index} className="flex gap-2 mb-2">
-                        <Input value={item.name} readOnly />
-                        <InputNumber value={item.amount} readOnly />
-                      </div>
-                    ))}
+          <div className="space-y-4">
+            <Form 
+              form={apForm}
+              initialValues={{
+                ...editingAP,
+                lineItems: (() => {
+                  if (editingAP.lineItems && editingAP.lineItems.length > 0) return editingAP.lineItems;
+                  
+                  const booking = bookings.find(b => b.mawbNo === editingAP.mawbNo);
+                  const weight = (editingAP as any).chargeableWeight || (editingAP as any).weight || 1;
+                  const items: any[] = [];
+                  
+                  if (booking) {
+                    const q = (booking as any).warehouseInfo?.chargeableWeight || booking.weight || weight;
+                    // First item: Air Freight
+                    const freightPrice = booking.costPrice || (booking.unitPrice * 0.85);
+                    items.push({
+                      name: 'Air Freight',
+                      quantity: q,
+                      unitPrice: Number(freightPrice.toFixed(4)),
+                      amount: Number((freightPrice * q).toFixed(2))
+                    });
+
+                    // Surcharges
+                    const surcharges = [
+                      { key: 'fuelSurcharge', label: 'Fuel Surcharge' },
+                      { key: 'securityScreening', label: 'Security Screening' },
+                      { key: 'terminalHandling', label: 'Terminal Handling' }
+                    ];
+
+                    surcharges.forEach(s => {
+                      const price = booking[s.key];
+                      if (price > 0) {
+                        items.push({ name: s.label, quantity: q, unitPrice: price, amount: Number((price * q).toFixed(2)) });
+                      }
+                    });
+
+                    // Customs
+                    const customs = booking.customsMethods?.[booking.declarationMethod] || booking.customsClearance;
+                    if (customs) {
+                      const cQty = customs.unit === 'per_kg' ? q : 1;
+                      items.push({ 
+                        name: `Customs Fee (${booking.declarationMethod.toUpperCase()})`, 
+                        quantity: cQty, 
+                        unitPrice: customs.amount, 
+                        amount: Number((customs.amount * cQty).toFixed(2)) 
+                      });
+                    }
+
+                    // Misc
+                    if (booking.miscFees && booking.miscFees.length > 0) {
+                      booking.miscFees.forEach((fee: any) => {
+                        const fQty = fee.unit === 'per_kg' ? q : 1;
+                        items.push({ name: fee.name, quantity: fQty, unitPrice: fee.amount, amount: Number((fee.amount * fQty).toFixed(2)) });
+                      });
+                    }
+                  } else {
+                    // Fallback to AP object properties if no booking found
+                    let currentTotal = editingAP.totalAmount;
+                    const surcharges = [
+                      { key: 'fuelSurcharge', label: 'Fuel Surcharge' },
+                      { key: 'securityScreening', label: 'Security Screening' },
+                      { key: 'terminalHandling', label: 'Terminal Handling' }
+                    ];
+
+                    surcharges.forEach(s => {
+                      const price = (editingAP as any)[s.key];
+                      if (price > 0) {
+                        const amt = Number((price * weight).toFixed(2));
+                        items.push({ name: s.label, quantity: weight, unitPrice: price, amount: amt });
+                        currentTotal -= amt;
+                      }
+                    });
+
+                    items.unshift({
+                      name: 'Air Freight',
+                      quantity: weight,
+                      unitPrice: Number((currentTotal / weight).toFixed(2)),
+                      amount: Number(currentTotal.toFixed(2))
+                    });
+                  }
+
+                  return items;
+                })()
+              }} 
+              layout="vertical"
+              onValuesChange={(changedValues, allValues) => {
+                if (changedValues.lineItems) {
+                   const lineItems = [...allValues.lineItems];
+                   let changed = false;
+                   lineItems.forEach((item, index) => {
+                     const changedItem = changedValues.lineItems[index];
+                     if (changedItem && (changedItem.quantity !== undefined || changedItem.unitPrice !== undefined)) {
+                        const q = item.quantity || 0;
+                        const p = item.unitPrice || 0;
+                        const newAmount = Number((q * p).toFixed(2));
+                        if (item.amount !== newAmount) {
+                          item.amount = newAmount;
+                          changed = true;
+                        }
+                     }
+                   });
+                   if (changed) {
+                     apForm.setFieldsValue({ lineItems });
+                   }
+                }
+              }}
+              onFinish={async (values) => {
+                const newTotal = (values.lineItems || []).reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+                await updateDoc(doc(db, 'accountsPayable', editingAP.id), {
+                  ...values,
+                  totalAmount: newTotal
+                });
+                message.success('Breakdown updated successfully');
+                setEditingAP(null);
+                fetchData();
+              }}
+            >
+              <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
+                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                  <Text strong className="text-slate-700">Breakdown Summary</Text>
+                </div>
+                
+                <div className="p-3 bg-white">
+                  <div className="flex px-1 mb-2 text-[10px] text-slate-400 uppercase font-medium border-b border-slate-100 pb-1">
+                    <div className="flex-1">Description</div>
+                    <div className="w-16 text-center">Qty</div>
+                    <div className="w-20 text-center">Unit Price</div>
+                    <div className="w-24 text-right">Total ({editingAP.currency})</div>
                   </div>
-                  <div className="font-bold mb-2">Add/Edit Items:</div>
-                  {fields.map(field => (
-                    <Space key={field.key} className="flex mb-2">
-                      <Form.Item {...field} name={[field.name, 'name']} rules={[{ required: true }]}>
-                        <Input placeholder="Item Name" />
-                      </Form.Item>
-                      <Form.Item {...field} name={[field.name, 'amount']} rules={[{ required: true }]}>
-                        <InputNumber placeholder="Amount" />
-                      </Form.Item>
-                      <Button onClick={() => remove(field.name)}>Delete</Button>
-                    </Space>
-                  ))}
-                  <Button type="dashed" onClick={() => add()} block>Add Item</Button>
-                </>
-              )}
-            </Form.List>
-            <Button type="primary" htmlType="submit" className="mt-4">Save Breakdown</Button>
-          </Form>
+
+                  <Form.List name="lineItems">
+                    {(fields, { add, remove }) => (
+                      <>
+                        {fields.map(field => (
+                          <div key={field.key} className="mb-2 last:mb-0 relative group border-b border-slate-50 pb-2 last:border-0">
+                            <div className="flex gap-2 items-center">
+                              <div className="flex-1">
+                                <Form.Item 
+                                  {...field} 
+                                  name={[field.name, 'name']} 
+                                  className="mb-0"
+                                  rules={[{ required: true, message: 'Required' }]}
+                                >
+                                  <Input 
+                                    variant="borderless" 
+                                    className="font-bold p-0 focus:ring-0 text-slate-800 text-xs" 
+                                    placeholder="Item name" 
+                                  />
+                                </Form.Item>
+                              </div>
+                              
+                              <div className="w-16">
+                                <Form.Item {...field} name={[field.name, 'quantity']} className="mb-0">
+                                  <InputNumber 
+                                    variant="filled" 
+                                    className="w-full text-[11px]" 
+                                    size="small" 
+                                    controls={false} 
+                                    placeholder="0"
+                                  />
+                                </Form.Item>
+                              </div>
+
+                              <div className="w-20">
+                                <Form.Item {...field} name={[field.name, 'unitPrice']} className="mb-0">
+                                  <InputNumber 
+                                    variant="filled" 
+                                    className="w-full text-[11px]" 
+                                    size="small" 
+                                    controls={false} 
+                                    placeholder="0.00"
+                                  />
+                                </Form.Item>
+                              </div>
+
+                              <div className="w-24 text-right">
+                                <Form.Item shouldUpdate noStyle>
+                                  {() => {
+                                    const qty = apForm.getFieldValue(['lineItems', field.name, 'quantity']) || 0;
+                                    const price = apForm.getFieldValue(['lineItems', field.name, 'unitPrice']) || 0;
+                                    return (
+                                      <Text className="font-mono font-bold text-slate-900 text-xs pr-1">
+                                        {(qty * price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </Text>
+                                    );
+                                  }}
+                                </Form.Item>
+                              </div>
+
+                              <Button 
+                                type="text" 
+                                danger 
+                                size="small" 
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0 h-auto w-4"
+                                icon={<Plus size={12} className="rotate-45" />} 
+                                onClick={() => remove(field.name)} 
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <Button 
+                          type="link" 
+                          onClick={() => add()} 
+                          icon={<Plus size={14} />}
+                          className="mt-2 text-slate-500 hover:text-blue-600 p-0 h-auto text-xs"
+                        >
+                          Add Custom Fee Section
+                        </Button>
+                      </>
+                    )}
+                  </Form.List>
+                </div>
+
+                <div className="bg-slate-50 px-4 py-4 border-t border-slate-200">
+                  <div className="flex justify-between items-center">
+                    <Text strong className="text-slate-600">Total Amount</Text>
+                    <Form.Item shouldUpdate className="mb-0">
+                      {() => {
+                        const items = apForm.getFieldValue('lineItems') || [];
+                        const total = items.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-400 text-sm font-light">{editingAP.currency}</span>
+                            <Text className="text-2xl font-bold text-slate-900">{total.toFixed(2)}</Text>
+                          </div>
+                        );
+                      }}
+                    </Form.Item>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <Button type="primary" htmlType="submit" block size="large" className="h-12 text-base font-semibold shadow-xl">
+                  Save Changes & Update Total
+                </Button>
+              </div>
+            </Form>
+          </div>
         )}
       </Drawer>
 

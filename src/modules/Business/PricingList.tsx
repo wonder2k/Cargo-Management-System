@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Checkbox, Tabs, Badge } from 'antd';
+import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Checkbox, Tabs, Badge, Alert, Popover } from 'antd';
 import { collection, query, getDocs, addDoc, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../../lib/firebase';
 import { FlightRate, Customer } from '../../types';
@@ -152,16 +152,38 @@ export const PricingList: React.FC = () => {
     }
   };
 
-  const isAdmin = profile?.role === 'admin';
-  const isAgent = (profile?.role === 'business') || !!localStorage.getItem('simulation_user');
-  const agentCustomer = customers.find(c => c.name === (localStorage.getItem('simulation_user') || profile?.companyName));
+  const isAdmin = profile?.role?.toLowerCase() === 'admin';
+  const isSimulation = !!localStorage.getItem('simulation_user');
+  const isAgent = profile?.role?.toLowerCase() === 'business';
+  
+  // Clear simulation if role is not admin but flag exists
+  useEffect(() => {
+    if (!isAdmin && isSimulation) {
+      localStorage.removeItem('simulation_user');
+    }
+  }, [isAdmin, isSimulation]);
 
-  const calculateFinalPrice = (rate: FlightRate, customer?: Customer) => {
+  const agentCustomer = (isAgent || (isAdmin && isSimulation)) 
+    ? customers.find(c => c.name === (localStorage.getItem('simulation_user') || (isAgent ? profile?.companyName : ''))) 
+    : null;
+
+  const calculateFinalPrice = (rate: FlightRate, targetCustomer?: Customer) => {
     let freight = rate.baseFreight;
     
-    // Apply tier if customer is provided OR if it's an agent using their own base price basis
-    // For agents, we use their own tier for the base price calculation
-    const effectiveTier = customer?.tier || (agentCustomer?.tier || 0);
+    // Determine the tier to apply
+    let effectiveTier = 0;
+    
+    if (targetCustomer) {
+        // 1. Specific quote for a customer
+        effectiveTier = targetCustomer.tier || 0;
+    } else if (isAdmin && isSimulation) {
+        // 2. Admin browsing in simulation mode
+        effectiveTier = agentCustomer?.tier || 0;
+    } else {
+        // 3. Logged in user browsing (Admin, Agent, etc)
+        // Use their own tier, default to 0
+        effectiveTier = profile?.tier || 0;
+    }
     
     if (effectiveTier) {
         freight += (rate.currency === 'CNY' ? 0.5 : 0.2) * effectiveTier;
@@ -267,6 +289,26 @@ export const PricingList: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isAdmin && isSimulation && (
+        <Alert
+          message={
+            <div className="flex justify-between items-center">
+              <span>
+                <strong>Simulation Mode:</strong> You are currently browsing as <strong>{localStorage.getItem('simulation_user')}</strong>. Prices reflect their specific tier.
+              </span>
+              <Button size="small" danger onClick={() => {
+                localStorage.removeItem('simulation_user');
+                window.location.reload();
+              }}>
+                Exit Simulation
+              </Button>
+            </div>
+          }
+          type="warning"
+          showIcon
+          className="mb-4 shadow-sm"
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('pricing.title')}</Title>
@@ -378,31 +420,54 @@ export const PricingList: React.FC = () => {
                   },
                   { 
                     title: t('pricing.finalPrice'), 
-                    render: (_, r) => (
-                        <div className="flex flex-col">
-                            {adjustmentType === 'manual' && selectedRateIds.includes(r.id) ? (
-                                <InputNumber 
-                                    size="small" 
-                                    min={r.baseFreight}
-                                    status={(customPrices[r.id] || 0) < r.baseFreight ? 'error' : ''}
-                                    value={customPrices[r.id] || r.baseFreight}
-                                    onChange={(v) => v && setCustomPrices(prev => ({ ...prev, [r.id]: v }))}
-                                    className="w-24"
-                                    formatter={value => `${r.currency} ${value}`}
-                                />
-                            ) : (
-                                <span className="text-sm font-bold text-blue-600">
-                                    {r.currency} {calculateFinalPrice(r).toFixed(2)} / KG
-                                </span>
-                            )}
-                            {getFlatFees(r) > 0 && (
-                              <span className="text-[10px] text-amber-600 font-bold">
-                                + {r.currency} {getFlatFees(r)} (Flat)
-                              </span>
-                            )}
-                            <span className="text-[10px] text-slate-400">{t('pricing.allSurcharges')}</span>
-                        </div>
-                    )
+                    render: (_, r) => {
+                        const finalPrice = calculateFinalPrice(r);
+                        const formalCustoms = r.customsMethods?.['formal'] || r.customsClearance;
+                        const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
+                        const miscPerKgAmount = (r.miscFees || []).reduce((sum, item) => item.unit === 'per_kg' ? sum + item.amount : sum, 0);
+                        const isSim = isAdmin && isSimulation;
+
+                        const breakdownContent = (
+                            <div className="space-y-1 text-xs">
+                                <div className="flex justify-between gap-8"><span>Base Freight:</span> <span className="font-mono">{r.baseFreight.toFixed(2)}</span></div>
+                                <div className="flex justify-between gap-8 text-blue-600"><span>Tier Adj ({isSim ? `Sim: ${agentCustomer?.tier || 0}` : `Me: ${profile?.tier || 0}`}):</span> <span className="font-mono">+{((r.currency === 'CNY' ? 0.5 : 0.2) * (isSim ? (agentCustomer?.tier || 0) : (profile?.tier || 0))).toFixed(2)}</span></div>
+                                <div className="flex justify-between gap-8 text-slate-500"><span>Fuel Surcharge:</span> <span className="font-mono">+{ (r.fuelSurcharge || 0).toFixed(2) }</span></div>
+                                <div className="flex justify-between gap-8 text-slate-500"><span>Security:</span> <span className="font-mono">+{ (r.securityScreening || 0).toFixed(2) }</span></div>
+                                <div className="flex justify-between gap-8 text-slate-500"><span>Terminal:</span> <span className="font-mono">+{ (r.terminalHandling || 0).toFixed(2) }</span></div>
+                                <div className="flex justify-between gap-8 text-slate-500"><span>Customs (KG):</span> <span className="font-mono">+{ customsAmount.toFixed(2) }</span></div>
+                                <div className="flex justify-between gap-8 text-slate-500"><span>Misc (KG):</span> <span className="font-mono">+{ miscPerKgAmount.toFixed(2) }</span></div>
+                                <div className="border-t pt-1 flex justify-between gap-8 font-bold text-blue-600"><span>Total:</span> <span className="font-mono">{finalPrice.toFixed(2)}</span></div>
+                            </div>
+                        );
+
+                        return (
+                            <div className="flex flex-col">
+                                {adjustmentType === 'manual' && selectedRateIds.includes(r.id) ? (
+                                    <InputNumber 
+                                        size="small" 
+                                        min={r.baseFreight}
+                                        status={(customPrices[r.id] || 0) < r.baseFreight ? 'error' : ''}
+                                        value={customPrices[r.id] || r.baseFreight}
+                                        onChange={(v) => v && setCustomPrices(prev => ({ ...prev, [r.id]: v }))}
+                                        className="w-24"
+                                        formatter={value => `${r.currency} ${value}`}
+                                    />
+                                ) : (
+                                    <Popover content={breakdownContent} title="Price Breakdown">
+                                        <span className="text-sm font-bold text-blue-600 cursor-help border-b border-dotted border-blue-300 w-fit">
+                                            {r.currency} {finalPrice.toFixed(2)} / KG
+                                        </span>
+                                    </Popover>
+                                )}
+                                {getFlatFees(r) > 0 && (
+                                  <span className="text-[10px] text-amber-600 font-bold">
+                                    + {r.currency} {getFlatFees(r)} (Flat)
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-slate-400">{t('pricing.allSurcharges')}</span>
+                            </div>
+                        );
+                    }
                   },
                   {
                     title: t('common.actions'),

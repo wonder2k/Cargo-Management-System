@@ -15,6 +15,7 @@ export interface UserProfile {
   logoUrl?: string;
   regions?: string[]; // Regional permissions
   warehouses?: Warehouse[];
+  tier?: number; // 0-10 for pricing adjustments
 }
 
 export interface Warehouse {
