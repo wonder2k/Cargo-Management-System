@@ -9,7 +9,7 @@ import businessRoutes from './routes/business';
 import operationRoutes from './routes/operation';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 // Middleware
 app.use(cors({
