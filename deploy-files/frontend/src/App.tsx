@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -12,18 +12,36 @@ import { OperationModule } from './modules/Operation';
 import { FinanceModule } from './modules/Finance';
 
 const LoginPage = () => {
-  const { login, demoLogin } = useAuth();
+  const { login, demoLogin, user } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = React.useState('wonder2k@gmail.com');
   const [password, setPassword] = React.useState('admin123');
   const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await login({ email, password });
+      navigate('/');
     } catch (e) {
       alert('Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      await demoLogin();
+      navigate('/');
+    } catch (e) {
+      alert('Demo login failed.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +97,7 @@ const LoginPage = () => {
 
           <div className="mt-6 flex flex-col gap-3">
              <button 
-              onClick={demoLogin}
+              onClick={handleDemoLogin}
               className="w-full border border-slate-200 text-slate-600 py-3 rounded-lg font-medium hover:bg-slate-50 transition flex items-center justify-center gap-2"
             >
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>

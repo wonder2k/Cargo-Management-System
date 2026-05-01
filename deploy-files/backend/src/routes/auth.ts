@@ -10,7 +10,13 @@ const router = Router();
 
 // 统一设置 Cookie 的逻辑
 const setAuthCookies = (res: any, user: any) => {
-  const userPayload = { id: user.id, email: user.email, role: user.role };
+  const userPayload = { 
+    id: user.id, 
+    email: user.email, 
+    role: user.role,
+    name: user.name,
+    tier: user.tier
+  };
   
   const accessToken = jwt.sign(
     userPayload,
