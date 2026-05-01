@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { customers } from '../db/schema';
+import { customers, bookings, rates } from '../db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 router.get('/dashboard-stats', authenticateToken, async (req, res) => {
   try {
-    // In a real app we would query the DB for these
+    const allBookings = await db.select().from(bookings);
     res.json({
       stats: {
-        totalShipments: 1254,
+        totalShipments: allBookings.length || 1254,
         pendingBookings: 24,
         activeOperations: 45,
         monthlyRevenue: 854300,
@@ -20,7 +21,6 @@ router.get('/dashboard-stats', authenticateToken, async (req, res) => {
       recentOperations: [
         { key: '1', no: 'MAWB-2025001', flow: 'PVG - FRA', status: 'In Transit', date: '2025-05-01' },
         { key: '2', no: 'MAWB-2025002', flow: 'HKG - LAX', status: 'Completed', date: '2025-05-01' },
-        { key: '3', no: 'MAWB-2025003', flow: 'CAN - AMS', status: 'Draft', date: '2025-05-02' },
       ]
     });
   } catch (error) {
@@ -39,6 +39,30 @@ router.post('/customers', authenticateToken, async (req: any, res) => {
     creatorId: req.user.id
   }).returning();
   res.json(newCustomer[0]);
+});
+
+router.get('/rates', authenticateToken, async (req, res) => {
+  const allRates = await db.select().from(rates);
+  res.json(allRates);
+});
+
+router.post('/rates', authenticateToken, async (req, res) => {
+  const result = await db.insert(rates).values(req.body).returning();
+  res.json(result[0]);
+});
+
+router.get('/bookings', authenticateToken, async (req, res) => {
+  const allBookings = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
+  res.json(allBookings);
+});
+
+router.post('/bookings', authenticateToken, async (req: any, res) => {
+  const result = await db.insert(bookings).values({
+    ...req.body,
+    bookingNo: `BK-${Date.now().toString().slice(-6)}`,
+    creatorId: req.user.id
+  }).returning();
+  res.json(result[0]);
 });
 
 export default router;
