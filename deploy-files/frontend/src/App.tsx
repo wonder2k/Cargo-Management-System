@@ -1,6 +1,15 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider, App as AntdApp } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { MainLayout } from './layouts/MainLayout';
+
+// Module Imports
+import { Dashboard } from './modules/Dashboard';
+import { BusinessModule } from './modules/Business';
+import { OperationModule } from './modules/Operation';
+import { FinanceModule } from './modules/Finance';
 
 const LoginPage = () => {
   const { demoLogin } = useAuth();
@@ -15,7 +24,7 @@ const LoginPage = () => {
           onClick={async () => {
             try {
               await demoLogin();
-              window.location.href = '/'; // 强制跳转
+              // After success, Navigate will take care of it if user state updates
             } catch (e) {
               alert('Login failed');
             }
@@ -33,44 +42,52 @@ const LoginPage = () => {
   );
 };
 
-const Dashboard = () => {
-  const { user, logout } = useAuth();
-  return (
-    <div className="p-10">
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-2xl font-bold mb-4">Welcome back, {user?.name}!</h2>
-        <div className="space-y-2 text-slate-600">
-          <p>Email: {user?.email}</p>
-          <p>Role: <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs uppercase font-bold">{user?.role}</span></p>
-        </div>
-        <button 
-          onClick={logout}
-          className="mt-8 px-6 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  );
-};
-
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-screen items-center justify-center">Loading Application...</div>;
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="text-slate-500 animate-pulse font-medium">Initializing JCargo CMS...</div>
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <ConfigProvider 
+      locale={zhCN} 
+      theme={{ 
+        token: { 
+          colorPrimary: '#2563eb',
+          borderRadius: 8,
+        } 
+      }}
+    >
+      <AntdApp>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="business" element={<BusinessModule />} />
+                <Route path="operation" element={<OperationModule />} />
+                <Route path="finance" element={<FinanceModule />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </AntdApp>
+    </ConfigProvider>
   );
 };
 
