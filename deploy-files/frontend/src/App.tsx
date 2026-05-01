@@ -1,25 +1,32 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, App as AntdApp } from 'antd';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import zhCN from 'antd/locale/zh_CN';
 
-// Placeholder components
 const LoginPage = () => {
   const { demoLogin } = useAuth();
+  
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-50">
-      <div className="p-8 bg-white rounded-lg shadow-md w-96">
-        <h1 className="mb-6 text-2xl font-bold text-center text-slate-800">JCargo CMS</h1>
-        <p className="mb-6 text-sm text-center text-slate-500">Log in to your cargo management system</p>
+    <div className="flex items-center justify-center h-screen bg-slate-100">
+      <div className="p-10 bg-white shadow-xl rounded-2xl w-full max-w-md">
+        <h1 className="text-3xl font-bold text-center mb-2 text-slate-800">JCargo</h1>
+        <p className="text-center text-slate-500 mb-8 text-sm">PostgreSQL + Drizzle Version</p>
+        
         <button 
-          onClick={() => demoLogin()}
-          className="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition-colors focus:ring-4 focus:ring-blue-100"
+          onClick={async () => {
+            try {
+              await demoLogin();
+              window.location.href = '/'; // 强制跳转
+            } catch (e) {
+              alert('Login failed');
+            }
+          }}
+          className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-200 shadow-md"
         >
           Quick Demo Login
         </button>
-        <div className="mt-6 pt-6 border-t border-slate-100 text-xs text-center text-slate-400">
-          Independent PostgreSQL + Drizzle deployment
+        
+        <div className="mt-8 text-center text-xs text-slate-400">
+          Backend: Express / DB: PostgreSQL
         </div>
       </div>
     </div>
@@ -29,49 +36,41 @@ const LoginPage = () => {
 const Dashboard = () => {
   const { user, logout } = useAuth();
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-      <p>Welcome, {user?.name} ({user?.role})</p>
-      <button 
-        onClick={logout}
-        className="mt-4 px-4 py-2 text-red-600 border border-red-600 rounded hover:bg-red-50"
-      >
-        Logout
-      </button>
+    <div className="p-10">
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+        <h2 className="text-2xl font-bold mb-4">Welcome back, {user?.name}!</h2>
+        <div className="space-y-2 text-slate-600">
+          <p>Email: {user?.email}</p>
+          <p>Role: <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs uppercase font-bold">{user?.role}</span></p>
+        </div>
+        <button 
+          onClick={logout}
+          className="mt-8 px-6 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   );
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center">Loading Application...</div>;
   if (!user) return <Navigate to="/login" replace />;
-  
   return <>{children}</>;
 };
 
 const App: React.FC = () => {
   return (
-    <ConfigProvider locale={zhCN} theme={{ token: { primaryColor: '#1d4ed8' } }}>
-      <AntdApp>
-        <AuthProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route 
-                path="/*" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-            </Routes>
-          </Router>
-        </AuthProvider>
-      </AntdApp>
-    </ConfigProvider>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 };
 
