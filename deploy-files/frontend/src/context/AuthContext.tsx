@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (credentials: any) => Promise<void>;
+  demoLogin: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -46,13 +47,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(response.data.user);
   };
 
+  const demoLogin = async () => {
+    const response = await api.post('/auth/demo-login');
+    setUser(response.data.user);
+  };
+
   const logout = async () => {
     await api.post('/auth/logout');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, demoLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

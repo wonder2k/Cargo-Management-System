@@ -6,17 +6,21 @@ import zhCN from 'antd/locale/zh_CN';
 
 // Placeholder components
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { demoLogin } = useAuth();
   return (
     <div className="flex items-center justify-center h-screen bg-slate-50">
       <div className="p-8 bg-white rounded-lg shadow-md w-96">
-        <h1 className="mb-6 text-2xl font-bold text-center">JCargo CMS</h1>
+        <h1 className="mb-6 text-2xl font-bold text-center text-slate-800">JCargo CMS</h1>
+        <p className="mb-6 text-sm text-center text-slate-500">Log in to your cargo management system</p>
         <button 
-          onClick={() => login({ email: 'admin@example.com', password: 'password' })}
-          className="w-full py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+          onClick={() => demoLogin()}
+          className="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 transition-colors focus:ring-4 focus:ring-blue-100"
         >
-          Demo Login
+          Quick Demo Login
         </button>
+        <div className="mt-6 pt-6 border-t border-slate-100 text-xs text-center text-slate-400">
+          Independent PostgreSQL + Drizzle deployment
+        </div>
       </div>
     </div>
   );
