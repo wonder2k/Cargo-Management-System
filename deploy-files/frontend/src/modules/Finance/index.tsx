@@ -1,76 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Card, Tag, Input, Typography, Tabs, Badge, Row, Col, Statistic, App, Modal } from 'antd';
-import { Wallet, Search, Filter, ArrowUpRight, ArrowDownLeft, FileText, CheckCircle2, AlertCircle, Clock, DollarSign } from 'lucide-react';
-import api from '../../services/api';
+import React from 'react';
+import { Card, Typography, Row, Col, Statistic } from 'antd';
+import { ArrowUpRight, ArrowDownLeft, DollarSign } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import dayjs from 'dayjs';
+import { InvoiceList } from './InvoiceList';
 
 const { Text, Title } = Typography;
 
 export const FinanceModule: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('ar');
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
   const { t } = useTranslation();
-  const { message } = App.useApp();
-
-  const fetchFinanceData = async (type: string) => {
-    setLoading(true);
-    try {
-      const endpoint = type === 'ar' ? '/finance/receivables' : '/finance/payables';
-      const res = await api.get(endpoint);
-      setData(res.data);
-    } catch (e) {
-      setData([
-        { id: 1, invoiceNo: 'INV-2025001', customerName: 'Huawei Logistics', mawbNo: '999-12345678', amount: 12500, currency: 'CNY', status: 'pending', dueDate: '2025-06-01' },
-        { id: 2, invoiceNo: 'INV-2025002', customerName: 'Xiaomi HK', mawbNo: '160-87654321', amount: 8400, currency: 'USD', status: 'paid', dueDate: '2025-05-15' },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFinanceData(activeTab);
-  }, [activeTab]);
-
-  const columns = [
-    { 
-      title: 'Invoice / Ref', 
-      dataIndex: 'invoiceNo', 
-      render: (t: string) => <Text className="font-mono font-bold text-blue-600">{t}</Text> 
-    },
-    { title: 'Entity', dataIndex: 'customerName' },
-    { title: 'MAWB No', dataIndex: 'mawbNo', render: (t: string) => <Text type="secondary" className="font-mono">{t}</Text> },
-    { 
-      title: 'Amount', 
-      dataIndex: 'amount', 
-      render: (v: number, r: any) => (
-        <Text strong className={activeTab === 'ar' ? 'text-green-600' : 'text-red-600'}>
-          {r.currency} {v.toLocaleString()}
-        </Text>
-      )
-    },
-    { 
-      title: 'Status', 
-      dataIndex: 'status', 
-      render: (s: string) => (
-        <Tag color={s === 'paid' ? 'green' : 'orange'} className="rounded-full px-3">
-          {s.toUpperCase()}
-        </Tag>
-      )
-    },
-    { title: 'Due Date', dataIndex: 'dueDate' },
-    {
-      title: 'Action',
-      render: (_: any, record: any) => (
-        <Space>
-           <Button size="small" icon={<FileText size={14}/>}>View</Button>
-           {record.status !== 'paid' && <Button size="small" type="primary" className="bg-blue-600">Reconcile</Button>}
-        </Space>
-      )
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -100,30 +37,7 @@ export const FinanceModule: React.FC = () => {
       </Row>
 
       <Card className="shadow-sm">
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            {
-              key: 'ar',
-              label: (
-                <div className="flex items-center gap-2 px-4 py-2">
-                  <ArrowUpRight size={16} /> <span>Receivables (AR)</span>
-                </div>
-              ),
-              children: <Table dataSource={data} columns={columns} loading={loading} rowKey="id" />
-            },
-            {
-              key: 'ap',
-              label: (
-                <div className="flex items-center gap-2 px-4 py-2">
-                  <ArrowDownLeft size={16} /> <span>Payables (AP)</span>
-                </div>
-              ),
-              children: <Table dataSource={data} columns={columns} loading={loading} rowKey="id" />
-            }
-          ]}
-        />
+        <InvoiceList />
       </Card>
     </div>
   );

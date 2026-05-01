@@ -34,16 +34,21 @@ export const rates = pgTable("rates", {
   origin: varchar("origin", { length: 10 }).notNull(),
   destination: varchar("destination", { length: 10 }).notNull(),
   carrier: varchar("carrier", { length: 10 }),
+  flightNo: varchar("flight_no", { length: 20 }),
+  aircraftType: varchar("aircraft_type", { length: 50 }),
+  schedule: varchar("schedule", { length: 50 }),
   basePrice: doublePrecision("base_price").notNull(),
   fuelSurcharge: doublePrecision("fuel_surcharge").default(0),
   securityFee: doublePrecision("security_fee").default(0),
   groundHandling: doublePrecision("ground_handling").default(0),
-  otherFees: doublePrecision("other_fees").default(0),
+  customsMethods: jsonb("customs_methods"), // { formal: { amount, unit }, 9610: { ... } }
+  miscFees: jsonb("misc_fees"), // Array of { name, amount, unit }
   currency: varchar("currency", { length: 10 }).default("CNY"),
-  effectiveDate: timestamp("effective_date"),
-  expiryDate: timestamp("expiry_date"),
+  region: varchar("region", { length: 50 }),
+  validUntil: timestamp("valid_until"),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // 4. Quotes Table
@@ -51,11 +56,16 @@ export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
   quoteNo: varchar("quote_no", { length: 50 }).notNull().unique(),
   customerId: integer("customer_id").references(() => customers.id),
-  rateId: integer("rate_id").references(() => rates.id),
+  customerName: varchar("customer_name", { length: 255 }),
+  recipientInfo: text("recipient_info"),
+  routes: jsonb("routes"), // Array of quoted routes with adjusted prices
   totalAmount: doublePrecision("total_amount").notNull(),
-  status: varchar("status", { length: 20 }).default("draft"), // draft, sent, accepted, rejected, expired
+  currency: varchar("currency", { length: 10 }).default("CNY"),
+  status: varchar("status", { length: 20 }).default("sent"), // sent, accepted, rejected, expired
   validUntil: timestamp("valid_until"),
   creatorId: integer("creator_id").references(() => users.id),
+  userName: varchar("user_name", { length: 255 }),
+  downloadCount: integer("download_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,33 +73,56 @@ export const quotes = pgTable("quotes", {
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   bookingNo: varchar("booking_no", { length: 50 }).notNull().unique(),
-  quoteId: integer("quote_id").references(() => quotes.id),
   customerId: integer("customer_id").references(() => customers.id),
+  customerName: varchar("customer_name", { length: 255 }),
   origin: varchar("origin", { length: 10 }),
   destination: varchar("destination", { length: 10 }),
-  expectedWeight: doublePrecision("expected_weight"),
-  expectedVolume: doublePrecision("expected_volume"),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, confirmed, cancelled, completed
+  carrier: varchar("carrier", { length: 20 }),
+  flightDate: timestamp("flight_date"),
+  pieces: integer("pieces"),
+  weight: doublePrecision("weight"),
+  volume: doublePrecision("volume"),
+  cargoDescription: text("cargo_description"),
+  declaration: varchar("declaration", { length: 50 }),
+  unitPrice: doublePrecision("unit_price"),
+  totalAmount: doublePrecision("total_amount"),
+  mawbNo: varchar("mawb_no", { length: 50 }),
+  shipperInfo: text("shipper_info"),
+  consigneeInfo: text("consignee_info"),
+  notifyInfo: text("notify_info"),
+  internalNotes: text("internal_notes"),
+  status: varchar("status", { length: 50 }).default("pending"), 
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // 6. MAWBs Table (Operations)
 export const mawbs = pgTable("mawbs", {
   id: serial("id").primaryKey(),
   mawbNo: varchar("mawb_no", { length: 20 }).notNull().unique(),
-  bookingId: integer("booking_id").references(() => bookings.id),
-  carrier: varchar("carrier", { length: 10 }),
+  bookingNo: varchar("booking_no", { length: 50 }), // Reference to bookingNo
+  carrier: varchar("carrier", { length: 20 }),
   origin: varchar("origin", { length: 10 }),
   destination: varchar("destination", { length: 10 }),
+  flightNo: varchar("flight_no", { length: 20 }),
   status: varchar("status", { length: 50 }).default("pending"),
   weight: doublePrecision("weight"),
-  volume: doublePrecision("volume"),
   chargeableWeight: doublePrecision("chargeable_weight"),
+  volume: doublePrecision("volume"),
   pieces: integer("pieces"),
+  dimensions: jsonb("dimensions"), // Array of { l, w, h, pcs }
   flightDate: timestamp("flight_date"),
+  atd: timestamp("atd"),
+  ata: timestamp("ata"),
+  pod: timestamp("pod"),
+  warehouse: varchar("warehouse", { length: 100 }),
+  warehouseEntryTime: timestamp("warehouse_entry_time"),
+  trackingLogs: jsonb("tracking_logs"),
+  lastActivity: text("last_activity"),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // 4. Accounts Receivable (AR)
@@ -106,7 +139,34 @@ export const accountsReceivable = pgTable("accounts_receivable", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// 5. Documents Table (File uploads)
+// 5. Accounts Payable (AP)
+export const accountsPayable = pgTable("accounts_payable", {
+  id: serial("id").primaryKey(),
+  mawbId: integer("mawb_id").references(() => mawbs.id),
+  vendorName: varchar("vendor_name", { length: 255 }),
+  vendorId: varchar("vendor_id", { length: 50 }),
+  totalAmount: doublePrecision("total_amount").notNull(),
+  currency: varchar("currency", { length: 10 }).default("CNY"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  lineItems: jsonb("line_items"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 6. Invoices Table
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  invoiceNo: varchar("invoice_no", { length: 50 }).notNull().unique(),
+  customerId: integer("customer_id").references(() => customers.id),
+  amount: doublePrecision("amount").notNull(),
+  currency: varchar("currency", { length: 10 }).default("CNY"),
+  status: varchar("status", { length: 50 }).default("unpaid"),
+  issueDate: timestamp("issue_date"),
+  dueDate: timestamp("due_date"),
+  lineItems: jsonb("line_items"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 7. Documents Table (File uploads)
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   type: varchar("type", { length: 50 }), // manifest, draft_mawb, invoice

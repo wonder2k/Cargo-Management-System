@@ -65,4 +65,18 @@ router.post('/bookings', authenticateToken, async (req: any, res) => {
   res.json(result[0]);
 });
 
+router.get('/quotes', authenticateToken, async (req, res) => {
+  const allQuotes = await db.select().from(quotes).orderBy(desc(quotes.createdAt));
+  res.json(allQuotes);
+});
+
+router.post('/quotes', authenticateToken, async (req: any, res) => {
+  const result = await db.insert(quotes).values({
+    ...req.body,
+    creatorId: req.user.id,
+    userName: req.user.name
+  }).returning();
+  res.json(result[0]);
+});
+
 export default router;
