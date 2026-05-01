@@ -28,10 +28,57 @@ export const customers = pgTable("customers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// 3. MAWBs Table (Operations)
+// 3. Rates Table
+export const rates = pgTable("rates", {
+  id: serial("id").primaryKey(),
+  origin: varchar("origin", { length: 10 }).notNull(),
+  destination: varchar("destination", { length: 10 }).notNull(),
+  carrier: varchar("carrier", { length: 10 }),
+  basePrice: doublePrecision("base_price").notNull(),
+  fuelSurcharge: doublePrecision("fuel_surcharge").default(0),
+  securityFee: doublePrecision("security_fee").default(0),
+  groundHandling: doublePrecision("ground_handling").default(0),
+  otherFees: doublePrecision("other_fees").default(0),
+  currency: varchar("currency", { length: 10 }).default("CNY"),
+  effectiveDate: timestamp("effective_date"),
+  expiryDate: timestamp("expiry_date"),
+  creatorId: integer("creator_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 4. Quotes Table
+export const quotes = pgTable("quotes", {
+  id: serial("id").primaryKey(),
+  quoteNo: varchar("quote_no", { length: 50 }).notNull().unique(),
+  customerId: integer("customer_id").references(() => customers.id),
+  rateId: integer("rate_id").references(() => rates.id),
+  totalAmount: doublePrecision("total_amount").notNull(),
+  status: varchar("status", { length: 20 }).default("draft"), // draft, sent, accepted, rejected, expired
+  validUntil: timestamp("valid_until"),
+  creatorId: integer("creator_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 5. Bookings Table
+export const bookings = pgTable("bookings", {
+  id: serial("id").primaryKey(),
+  bookingNo: varchar("booking_no", { length: 50 }).notNull().unique(),
+  quoteId: integer("quote_id").references(() => quotes.id),
+  customerId: integer("customer_id").references(() => customers.id),
+  origin: varchar("origin", { length: 10 }),
+  destination: varchar("destination", { length: 10 }),
+  expectedWeight: doublePrecision("expected_weight"),
+  expectedVolume: doublePrecision("expected_volume"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, confirmed, cancelled, completed
+  creatorId: integer("creator_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// 6. MAWBs Table (Operations)
 export const mawbs = pgTable("mawbs", {
   id: serial("id").primaryKey(),
   mawbNo: varchar("mawb_no", { length: 20 }).notNull().unique(),
+  bookingId: integer("booking_id").references(() => bookings.id),
   carrier: varchar("carrier", { length: 10 }),
   origin: varchar("origin", { length: 10 }),
   destination: varchar("destination", { length: 10 }),

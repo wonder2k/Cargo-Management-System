@@ -32,22 +32,42 @@ export const MainLayout: React.FC = () => {
     {
       key: '/',
       icon: <LayoutDashboard size={18} />,
-      label: <Link to="/">{t('common.dashboard')}</Link>,
+      label: <Link to="/">{t('common.dashboard') || 'Dashboard'}</Link>,
     },
     {
-      key: '/business',
+      key: '/rates',
+      icon: <Coins size={18} />,
+      label: <Link to="/rates">{t('common.rates') || 'Rates Cabinet'}</Link>,
+    },
+    {
+      key: '/quotes',
+      icon: <Globe size={18} />,
+      label: <Link to="/quotes">{t('common.quotes') || 'Quote History'}</Link>,
+    },
+    {
+      key: '/bookings',
       icon: <Briefcase size={18} />,
-      label: <Link to="/business">{t('common.business')}</Link>,
+      label: <Link to="/bookings">{t('common.bookings') || 'Air Bookings'}</Link>,
     },
     {
       key: '/operation',
       icon: <Plane size={18} />,
-      label: <Link to="/operation">{t('common.operations')}</Link>,
+      label: <Link to="/operation">{t('common.operations') || 'Operation (MAWB)'}</Link>,
     },
     {
       key: '/finance',
       icon: <Coins size={18} />,
-      label: <Link to="/finance">{t('common.finance')}</Link>,
+      label: <Link to="/finance">{t('common.finance') || 'Finance (AR/AP)'}</Link>,
+    },
+    {
+      key: '/business',
+      icon: <User size={18} />,
+      label: <Link to="/business">{t('common.business') || 'Customer CRM'}</Link>,
+    },
+    {
+      key: '/users',
+      icon: <User size={18} />,
+      label: <Link to="/users">{t('common.users') || 'Team Access'}</Link>,
     },
   ];
 

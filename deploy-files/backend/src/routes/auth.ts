@@ -46,20 +46,19 @@ router.post('/demo-login', async (req, res) => {
   res.json({ message: 'Demo Login Success', user: demoUser });
 });
 
-// 2. 为了方便测试，额外提供一个 GET 版 Demo Login (仅供测试使用)
-router.get('/demo-login', async (req, res) => {
-  const demoUser = { id: 999, email: 'demo@jcargo.com', name: 'Demo User', role: 'admin' };
-  setAuthCookies(res, demoUser);
-  res.send('Demo Login Successful via GET (Cookie Set). You can now access the app.');
-});
-
 // 3. 标准登录 (POST /api/auth/login)
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  // 如果是 Demo 账号，走特殊通道
-  if (email === 'demo@jcargo.com' || email === 'admin@example.com') {
-    const demoUser = { id: 1, email: 'demo@jcargo.com', name: 'Admin Demo', role: 'admin' };
+  // 如果是 Demo 账号或预设管理员，走特殊通道
+  if (email === 'demo@jcargo.com' || (email === 'wonder2k@gmail.com' && password === 'admin123')) {
+    const demoUser = { 
+      id: email === 'wonder2k@gmail.com' ? 100 : 999, 
+      email: email, 
+      name: email === 'wonder2k@gmail.com' ? 'Super Admin' : 'Demo User', 
+      role: 'admin',
+      tier: 10
+    };
     setAuthCookies(res, demoUser);
     return res.json({ user: demoUser });
   }
@@ -70,7 +69,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     setAuthCookies(res, user);
-    res.json({ user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+    res.json({ user: { id: user.id, email: user.email, role: user.role, name: user.name, tier: user.tier } });
   } catch (error) {
     res.status(500).json({ message: 'Login Error' });
   }
