@@ -8,64 +8,121 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-// Helper to generate and set token cookie
-const setAuthCookie = (res: any, user: any) => {
+// Helper to set both access and refresh tokens in httpOnly cookies
+const setAuthCookies = (res: any, user: any) => {
+  const userPayload = { id: user.id, email: user.email, role: user.role };
+  
   const accessToken = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    userPayload,
     process.env.JWT_SECRET!,
     { expiresIn: '1h' }
   );
 
-  res.cookie('accessToken', accessToken, {
+  const refreshToken = jwt.sign(
+    userPayload,
+    process.env.REFRESH_TOKEN_SECRET || 'fallback_refresh_secret',
+    { expiresIn: '7d' }
+  );
+
+  const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
+  };
+
+  res.cookie('accessToken', accessToken, {
+    ...cookieOptions,
     maxAge: 3600000, // 1 hour
+  });
+
+  res.cookie('refreshToken', refreshToken, {
+    ...cookieOptions,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
 
+// 1. Demo Login Endpoint (POST /api/auth/demo-login)
 router.post('/demo-login', async (req, res) => {
-  // Return a static demo user
+  // Static demo user data
   const demoUser = {
-    id: 999, // Static ID for demo
+    id: 1,
     email: 'demo@jcargo.com',
     name: 'Demo User',
     role: 'admin',
-    tier: 10
+    tier: 1
   };
 
-  setAuthCookie(res, demoUser);
-  res.json({ user: demoUser });
+  setAuthCookies(res, demoUser);
+  res.json({ 
+    message: 'Demo login successful',
+    user: demoUser 
+  });
 });
 
+// 2. Regular Login Endpoint (POST /api/auth/login)
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
-  // Handle Demo login via regular login form
-  if (email === 'demo@jcargo.com' || (email.startsWith('demo') && password === 'password')) {
-    const demoUser = { id: 999, email: 'demo@jcargo.com', name: 'Demo User', role: 'admin', tier: 10 };
-    setAuthCookie(res, demoUser);
+  // Auto-login for demo email or specific demo patterns
+  if (email === 'demo@jcargo.com' || (email && email.includes('demo') && password === 'password')) {
+    const demoUser = { id: 1, email: 'demo@jcargo.com', name: 'Demo User', role: 'admin', tier: 1 };
+    setAuthCookies(res, demoUser);
     return res.json({ user: demoUser });
   }
 
-  const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+  try {
+    const user = await db.query.users.findFirst({ 
+      where: eq(users.email, email) 
+    });
 
-  if (!user || !(await argon2.verify(user.passwordHash, password))) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user || !(await argon2.verify(user.passwordHash, password))) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    setAuthCookies(res, user);
+    res.json({ 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role, 
+        name: user.name,
+        tier: user.tier 
+      } 
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-
-  setAuthCookie(res, user);
-  res.json({ user: { id: user.id, email: user.email, role: user.role, name: user.name, tier: user.tier } });
 });
 
+// 3. User Profile (GET /api/auth/profile)
 router.get('/profile', authenticateToken, async (req: any, res) => {
-  const user = await db.query.users.findFirst({ where: eq(users.id, req.user.id) });
-  res.json(user);
+  try {
+    const user = await db.query.users.findFirst({ 
+      where: eq(users.id, req.user.id) 
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching profile' });
+  }
 });
 
+// 4. Logout (POST /api/auth/logout)
 router.post('/logout', (req, res) => {
-  res.clearCookie('accessToken');
-  res.json({ message: 'Logged out' });
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+  };
+
+  res.clearCookie('accessToken', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
+  res.json({ message: 'Logged out successfully' });
 });
 
 export default router;
