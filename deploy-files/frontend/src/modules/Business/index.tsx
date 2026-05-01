@@ -3,14 +3,24 @@ import { Tabs, Card, Typography, Badge, Row, Col, Statistic, Button, Table, Tag,
 import { Coins, Globe, Briefcase, Plus, Search, Filter, TrendingUp, Users, FilePlus, Package, Plane, CheckCircle2, History, Trash2, Edit2 } from 'lucide-react';
 import api from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
 export const BusinessModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('rates');
+  const location = useLocation();
   const { t } = useTranslation();
   const { message } = App.useApp();
+
+  useEffect(() => {
+    if (location.pathname.includes('/rates')) setActiveTab('rates');
+    else if (location.pathname.includes('/quotes')) setActiveTab('quotes');
+    else if (location.pathname.includes('/bookings')) setActiveTab('bookings');
+    else if (location.pathname.includes('/customers')) setActiveTab('crm');
+    else if (location.pathname.includes('/business')) setActiveTab('rates');
+  }, [location]);
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Card, Tag, Input, Typography, Tabs, Badge, Row, Col, Statistic, Tooltip, App, Modal, Form, Select, DatePicker, Divider } from 'antd';
+import { Table, Button, Space, Card, Tag, Input, Typography, Tabs, Badge, Row, Col, Statistic, Tooltip, App, Modal, Form, Select, DatePicker, Divider, InputNumber } from 'antd';
 import { Plane, Search, Filter, Info, AlertCircle, Clock, Package, FileText, Play, ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import api from '../../services/api';
 import { useTranslation } from 'react-i18next';

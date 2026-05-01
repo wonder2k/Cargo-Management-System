@@ -10,7 +10,14 @@ import {
   Menu as MenuIcon,
   ChevronLeft,
   ChevronRight,
-  Globe
+  Globe,
+  Package,
+  Map,
+  History as LucideHistory,
+  ShieldAlert,
+  BarChart2,
+  Users,
+  DollarSign
 } from 'lucide-react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -31,43 +38,43 @@ export const MainLayout: React.FC = () => {
   const menuItems = [
     {
       key: '/',
-      icon: <LayoutDashboard size={18} />,
-      label: <Link to="/">{t('common.dashboard') || 'Dashboard'}</Link>,
+      icon: <BarChart2 size={18} />,
+      label: <Link to="/">{t('menu.dashboard')}</Link>,
     },
     {
-      key: '/rates',
-      icon: <Coins size={18} />,
-      label: <Link to="/rates">{t('common.rates') || 'Rates Cabinet'}</Link>,
+      key: '/business',
+      icon: <Map size={18} />,
+      label: <Link to="/business">{t('menu.business')}</Link>,
     },
     {
       key: '/quotes',
-      icon: <Globe size={18} />,
-      label: <Link to="/quotes">{t('common.quotes') || 'Quote History'}</Link>,
+      icon: <LucideHistory size={18} />,
+      label: <Link to="/quotes">{t('menu.quotes')}</Link>,
     },
     {
       key: '/bookings',
-      icon: <Briefcase size={18} />,
-      label: <Link to="/bookings">{t('common.bookings') || 'Air Bookings'}</Link>,
+      icon: <Package size={18} />,
+      label: <Link to="/bookings">{t('menu.bookings')}</Link>,
     },
     {
       key: '/operation',
       icon: <Plane size={18} />,
-      label: <Link to="/operation">{t('common.operations') || 'Operation (MAWB)'}</Link>,
+      label: <Link to="/operation">{t('menu.operation')}</Link>,
     },
     {
       key: '/finance',
-      icon: <Coins size={18} />,
-      label: <Link to="/finance">{t('common.finance') || 'Finance (AR/AP)'}</Link>,
+      icon: <DollarSign size={18} />,
+      label: <Link to="/finance">{t('menu.finance')}</Link>,
     },
     {
-      key: '/business',
-      icon: <User size={18} />,
-      label: <Link to="/business">{t('common.business') || 'Customer CRM'}</Link>,
+      key: '/customers',
+      icon: <Users size={18} />,
+      label: <Link to="/customers">{t('menu.customers')}</Link>,
     },
     {
       key: '/users',
-      icon: <User size={18} />,
-      label: <Link to="/users">{t('common.users') || 'Team Access'}</Link>,
+      icon: <ShieldAlert size={18} />,
+      label: <Link to="/users">{t('menu.users')}</Link>,
     },
   ];
 

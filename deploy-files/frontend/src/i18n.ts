@@ -49,13 +49,7 @@ const resources = {
         "origin": "Origin",
         "destination": "Destination",
         "all": "All",
-        "reset": "Reset",
-        "rates": "Rates Cabinet",
-        "quotes": "Quote History",
-        "bookings": "Air Bookings",
-        "operations": "Operation (MAWB)",
-        "finance": "Finance (AR/AP)",
-        "users": "Team Access"
+        "reset": "Reset"
       },
       "booking": {
         "title": "Air Cargo Bookings",
@@ -228,13 +222,7 @@ const resources = {
         "origin": "始发站",
         "destination": "目的站",
         "all": "全部",
-        "reset": "重置",
-        "rates": "运价中心",
-        "quotes": "报价记录",
-        "bookings": "订舱管理",
-        "operations": "操作中心 (MAWB)",
-        "finance": "财务结算",
-        "users": "用户及权限"
+        "reset": "重置"
       },
       "booking": {
         "title": "航司订舱",

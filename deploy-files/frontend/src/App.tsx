@@ -13,8 +13,8 @@ import { FinanceModule } from './modules/Finance';
 
 const LoginPage = () => {
   const { login, demoLogin } = useAuth();
-  const [email, setEmail] = React.useState('demo@jcargo.com');
-  const [password, setPassword] = React.useState('password123');
+  const [email, setEmail] = React.useState('wonder2k@gmail.com');
+  const [password, setPassword] = React.useState('admin123');
   const [loading, setLoading] = React.useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,6 +38,12 @@ const LoginPage = () => {
           </div>
           <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">JCargo CMS</h2>
           <p className="text-slate-500 text-center mb-8 text-sm">Professional Air Cargo Management System</p>
+          
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <p className="text-xs text-blue-800 font-medium mb-1">Production Test Credentials:</p>
+            <p className="text-xs text-blue-700">Email: <span className="font-bold">wonder2k@gmail.com</span></p>
+            <p className="text-xs text-blue-700">Password: <span className="font-bold">admin123</span></p>
+          </div>
           
           <form className="space-y-4" onSubmit={handleLogin}>
             <div>
@@ -132,10 +138,11 @@ const App: React.FC = () => {
                 }
               >
                 <Route index element={<Dashboard />} />
+                <Route path="business" element={<BusinessModule />} />
                 <Route path="rates" element={<BusinessModule />} />
                 <Route path="quotes" element={<BusinessModule />} />
                 <Route path="bookings" element={<BusinessModule />} />
-                <Route path="business" element={<BusinessModule />} />
+                <Route path="customers" element={<BusinessModule />} />
                 <Route path="operation" element={<OperationModule />} />
                 <Route path="finance" element={<FinanceModule />} />
                 <Route path="users" element={<Dashboard />} />
