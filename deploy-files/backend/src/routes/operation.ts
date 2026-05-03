@@ -30,8 +30,8 @@ router.post('/mawbs/:id/status', authenticateToken, async (req, res) => {
     }).where(eq(mawbs.id, parseInt(id)));
 
     // If associated booking exists, update it too
-    if (mawb.bookingId) {
-      await db.update(bookings).set({ status }).where(eq(bookings.id, mawb.bookingId));
+    if (mawb.bookingNo) {
+      await db.update(bookings).set({ status }).where(eq(bookings.bookingNo, mawb.bookingNo));
     }
     
     res.json({ message: 'Status updated successfully' });

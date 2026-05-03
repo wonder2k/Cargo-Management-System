@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { accountsReceivable } from '../db/schema';
+import { accountsReceivable, accountsPayable, invoices } from '../db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { authenticateToken, authorizeRole } from '../middleware/auth';
 
 const router = Router();

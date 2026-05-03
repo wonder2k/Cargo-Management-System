@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { customers, bookings, rates } from '../db/schema';
+import { customers, bookings, rates, quotes } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { authenticateToken } from '../middleware/auth';
 
