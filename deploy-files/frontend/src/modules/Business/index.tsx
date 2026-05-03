@@ -28,30 +28,30 @@ export const BusinessModule: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <Title level={3}>Sales & Business Center</Title>
-          <Text type="secondary">Manage pricing, quotations and air cargo bookings</Text>
+          <Title level={3}>{t('business.title', 'Sales & Business Center')}</Title>
+          <Text type="secondary">{t('business.subtitle', 'Manage pricing, quotations and air cargo bookings')}</Text>
         </div>
       </div>
 
       <Row gutter={20}>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-blue-50">
-            <Statistic title="Total Revenue" value={245000} prefix={<TrendingUp size={18} className="mr-2 text-blue-600" />} />
+            <Statistic title={t('business.totalRevenue', 'Total Revenue')} value={245000} prefix={<TrendingUp size={18} className="mr-2 text-blue-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-green-50">
-            <Statistic title="Active Quotes" value={18} prefix={<Globe size={18} className="mr-2 text-green-600" />} />
+            <Statistic title={t('business.activeQuotes', 'Active Quotes')} value={18} prefix={<Globe size={18} className="mr-2 text-green-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-purple-50">
-            <Statistic title="Confirmed Bookings" value={12} prefix={<Briefcase size={18} className="mr-2 text-purple-600" />} />
+            <Statistic title={t('business.confirmedBookings', 'Confirmed Bookings')} value={12} prefix={<Briefcase size={18} className="mr-2 text-purple-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-indigo-50">
-            <Statistic title="CRM Clients" value={45} prefix={<Users size={18} className="mr-2 text-indigo-600" />} />
+            <Statistic title={t('business.crmClients', 'CRM Clients')} value={45} prefix={<Users size={18} className="mr-2 text-indigo-600" />} />
           </Card>
         </Col>
       </Row>
@@ -71,7 +71,7 @@ export const BusinessModule: React.FC = () => {
               key: 'rates',
               label: (
                 <div className="flex items-center gap-2 px-4 py-2">
-                  <Coins size={16} /> <span>Rates Cabinet</span>
+                  <Coins size={16} /> <span>{t('pricing.title')}</span>
                 </div>
               ),
               children: <PricingList />
@@ -80,7 +80,7 @@ export const BusinessModule: React.FC = () => {
               key: 'quotes',
               label: (
                 <div className="flex items-center gap-2 px-4 py-2">
-                  <Globe size={16} /> <span>Quote History</span>
+                  <Globe size={16} /> <span>{t('quotes.title')}</span>
                 </div>
               ),
               children: <QuotationHistory />
@@ -89,7 +89,7 @@ export const BusinessModule: React.FC = () => {
               key: 'bookings',
               label: (
                 <div className="flex items-center gap-2 px-4 py-2">
-                  <Briefcase size={16} /> <span>Air Bookings</span>
+                  <Briefcase size={16} /> <span>{t('bookings.title')}</span>
                 </div>
               ),
               children: <BookingList />
@@ -98,7 +98,7 @@ export const BusinessModule: React.FC = () => {
                key: 'crm',
                label: (
                  <div className="flex items-center gap-2 px-4 py-2">
-                   <Users size={16} /> <span>Customer CRM</span>
+                   <Users size={16} /> <span>{t('common.customers')}</span>
                  </div>
                ),
                children: <CustomerCRMTab />

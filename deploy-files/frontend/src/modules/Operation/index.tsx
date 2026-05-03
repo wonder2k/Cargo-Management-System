@@ -22,22 +22,22 @@ export const OperationModule: React.FC = () => {
       <Row gutter={20}>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-blue-50">
-            <Statistic title="Active Flights" value={activeCount} prefix={<Plane size={18} className="mr-2 text-blue-600" />} />
+            <Statistic title={t('operation.activeFlights', 'Active Flights')} value={activeCount} prefix={<Plane size={18} className="mr-2 text-blue-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-purple-50">
-            <Statistic title="In Customs" value={3} prefix={<ShieldCheck size={18} className="mr-2 text-purple-600" />} />
+            <Statistic title={t('operation.inCustoms', 'In Customs')} value={3} prefix={<ShieldCheck size={18} className="mr-2 text-purple-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-cyan-50">
-            <Statistic title="In Warehouse" value={8} prefix={<Package size={18} className="mr-2 text-cyan-600" />} />
+            <Statistic title={t('operation.inWarehouse', 'In Warehouse')} value={8} prefix={<Package size={18} className="mr-2 text-cyan-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-amber-50">
-            <Statistic title="Booked (Pending)" value={5} prefix={<Clock size={18} className="mr-2 text-amber-600" />} />
+            <Statistic title={t('operation.bookedPending', 'Booked (Pending)')} value={5} prefix={<Clock size={18} className="mr-2 text-amber-600" />} />
           </Card>
         </Col>
       </Row>

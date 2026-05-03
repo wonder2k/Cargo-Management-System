@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Card, Tag, Drawer, Steps, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge } from 'antd';
+import { Table, Button, Card, Tag, Drawer, Steps, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider } from 'antd';
 import { MAWB, MawbStatus, Booking } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, Search, FileText, Package, ChevronRight, ExternalLink, Play } from 'lucide-react';
@@ -181,7 +181,7 @@ export const MawbList: React.FC = () => {
        >
          {selectedMawb && (
             <div className="space-y-6">
-               <Card size="small" bg-slate-50>
+               <Card size="small" className="bg-slate-50">
                   <Row gutter={[16, 16]}>
                      <Col span={12}><Text type="secondary">Origin:</Text> <div className="font-bold">{selectedMawb.origin}</div></Col>
                      <Col span={12}><Text type="secondary">Destination:</Text> <div className="font-bold">{selectedMawb.destination}</div></Col>

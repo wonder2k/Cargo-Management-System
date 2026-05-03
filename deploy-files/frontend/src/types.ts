@@ -126,8 +126,10 @@ export interface MAWB {
   lastUpdated: string;
   grossWeight?: number;
   chargeableWeight?: number;
+  weight?: number; // Legacy alias or additional field if needed
   pieces?: number;
   volume?: number;
+  remarks?: string;
   dims?: { l: number, w: number, h: number, pcs: number }[];
   trackingLogs?: any[];
   warehouse?: string;

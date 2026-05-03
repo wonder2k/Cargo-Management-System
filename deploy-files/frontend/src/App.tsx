@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MainLayout } from './layouts/MainLayout';
 
@@ -132,9 +134,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App: React.FC = () => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language === 'zh' ? zhCN : enUS;
+
   return (
     <ConfigProvider 
-      locale={zhCN} 
+      locale={locale} 
       theme={{ 
         token: { 
           colorPrimary: '#2563eb',

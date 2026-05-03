@@ -36,12 +36,39 @@ const resources = {
         remarks: "Remarks",
         all: "All"
       },
+      menu: {
+        dashboard: "Dashboard",
+        business: "Business",
+        quotes: "Quotes",
+        bookings: "Bookings",
+        operation: "Operation",
+        finance: "Finance",
+        customers: "Customers",
+        users: "Users"
+      },
+      business: {
+        title: "Sales & Business Center",
+        subtitle: "Manage pricing, quotations and air cargo bookings",
+        totalRevenue: "Total Revenue",
+        activeQuotes: "Active Quotes",
+        confirmedBookings: "Confirmed Bookings",
+        crmClients: "CRM Clients"
+      },
       dashboard: {
         overview: "Business Overview",
+        overviewSubtitle: "Real-time logistics monitoring and performance metrics",
+        systemLive: "System Live",
         totalShipments: "Total Shipments",
         pendingBookings: "Pending Bookings",
+        actionRequired: "Action Required",
         activeOperations: "Active Operations",
+        departuresToday: "7 departures today",
         monthlyRevenue: "Monthly Revenue",
+        weeklyVolume: "Weekly Air Volume (Tons)",
+        warehouseCapacity: "Warehouse Capacity",
+        quickAlerts: "Quick Alerts",
+        creditOverflow: "Credit Overflow: Huawei",
+        balanceLimitExceeded: "Outstanding balance exceeds limit by ¥50k",
         recentActivities: "Recent Activities",
         revenueGrowth: "Revenue Growth",
         shipmentGrowth: "Shipment Growth"
@@ -82,6 +109,11 @@ const resources = {
       },
       operation: {
         title: "MAWB Operations",
+        subtitle: "Monitor and control air shipments",
+        activeFlights: "Active Flights",
+        inCustoms: "In Customs",
+        inWarehouse: "In Warehouse",
+        bookedPending: "Booked (Pending)",
         mawbNo: "MAWB No",
         tracking: "Tracking",
         warehouse: "Warehouse",
@@ -93,6 +125,7 @@ const resources = {
       },
       finance: {
         title: "Financial Settlement",
+        subtitle: "Accounts Receivable, Payable and Net Profit tracking",
         ar: "Account Receivable",
         ap: "Account Payable",
         invoiceNo: "Invoice No",
@@ -135,12 +168,39 @@ const resources = {
         remarks: "备注",
         all: "全部"
       },
+      menu: {
+        dashboard: "工作台",
+        business: "商务板块",
+        quotes: "报价历史",
+        bookings: "订舱管理",
+        operation: "中心操作",
+        finance: "财务结算",
+        customers: "客户查询",
+        users: "权限管理"
+      },
+      business: {
+        title: "商务与销售中心",
+        subtitle: "管理运价、报价单以及空运订舱业务",
+        totalRevenue: "总营收额",
+        activeQuotes: "有效报价",
+        confirmedBookings: "已确认订舱",
+        crmClients: "CRM 客户数"
+      },
       dashboard: {
         overview: "业务概览",
+        overviewSubtitle: "实时物流监控与性能指标",
+        systemLive: "系统在线",
         totalShipments: "总出货量",
-        pendingBookings: "待处理订舱",
+        pendingBookings: "待审批订舱",
+        actionRequired: "需要处理",
         activeOperations: "进行中操作",
-        monthlyRevenue: "月度营收",
+        departuresToday: "今日共有 7 架航班起飞",
+        monthlyRevenue: "本月总营收",
+        weeklyVolume: "每周货量概况 (吨)",
+        warehouseCapacity: "仓库库容率",
+        quickAlerts: "快速警报",
+        creditOverflow: "信用超额: 华为",
+        balanceLimitExceeded: "待收欠款已超过信用额度 ¥50k",
         recentActivities: "最近动态",
         revenueGrowth: "营收环比",
         shipmentGrowth: "货量环比"
@@ -180,7 +240,12 @@ const resources = {
         details: "详情"
       },
       operation: {
-        title: "主单列表",
+        title: "空运操作中心",
+        subtitle: "监控并处理空运货物状态",
+        activeFlights: "活跃航班",
+        inCustoms: "报关中",
+        inWarehouse: "已入库",
+        bookedPending: "已订舱(待入库)",
         mawbNo: "主单号",
         tracking: "轨迹追踪",
         warehouse: "进仓管理",
@@ -192,6 +257,7 @@ const resources = {
       },
       finance: {
         title: "结算中心",
+        subtitle: "追踪应收、应付账目及净利润表现",
         ar: "应收管理",
         ap: "应付管理",
         invoiceNo: "账单号",

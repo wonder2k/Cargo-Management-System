@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Row, Col, Typography } from 'antd';
 import { Customer, CustomerType, PaymentTerm, Currency } from '../../types';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AuthContext';
 import { UserPlus, Edit2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { businessApi } from '../../services/api';
@@ -28,7 +28,7 @@ export const CustomerList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const { message } = App.useApp();
@@ -70,7 +70,7 @@ export const CustomerList: React.FC = () => {
       prefix = core.substring(0, 2).toUpperCase();
     }
     
-    const operatorPrefix = (profile?.displayName || 'SY').substring(0, 2).toUpperCase();
+    const operatorPrefix = (user?.name || 'SY').substring(0, 2).toUpperCase();
     const count = customers.length + 1;
     const numSuffix = count.toString().padStart(3, '0');
     return `${prefix}${operatorPrefix}${numSuffix}`;
@@ -117,7 +117,7 @@ export const CustomerList: React.FC = () => {
             form.resetFields();
             setModalOpen(true);
           }}
-          disabled={!['admin', 'business'].includes(profile?.role || '')}
+          disabled={!['admin', 'business'].includes(user?.role || '')}
           className="rounded-lg shadow-sm"
         >
           {t('common.add') || 'Add Client'}

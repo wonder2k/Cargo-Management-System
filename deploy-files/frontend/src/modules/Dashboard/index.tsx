@@ -6,10 +6,12 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
 export const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalShipments: 0,
     pendingBookings: 0,
@@ -63,11 +65,11 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-end">
         <div>
-          <Title level={2} className="!mb-1">Operations Overview</Title>
-          <Text type="secondary">Real-time logistics monitoring and performance metrics</Text>
+          <Title level={2} className="!mb-1">{t('dashboard.overview')}</Title>
+          <Text type="secondary">{t('dashboard.overviewSubtitle', 'Real-time logistics monitoring and performance metrics')}</Text>
         </div>
         <div className="bg-slate-100 p-1 rounded-lg flex gap-2">
-          <Badge status="processing" text="System Live" className="px-3" />
+          <Badge status="processing" text={t('dashboard.systemLive', 'System Live')} className="px-3" />
         </div>
       </div>
       
@@ -76,7 +78,7 @@ export const Dashboard: React.FC = () => {
           <Card bordered={false} className="shadow-sm border-l-4 border-blue-500 overflow-hidden">
             <div className="flex justify-between items-start">
               <Statistic
-                title={<span className="text-slate-500 font-medium">Total Shipments</span>}
+                title={<span className="text-slate-500 font-medium">{t('dashboard.totalShipments')}</span>}
                 value={stats.totalShipments}
                 prefix={<Package className="text-blue-500 mr-2" size={18} />}
               />
@@ -90,11 +92,11 @@ export const Dashboard: React.FC = () => {
           <Card bordered={false} className="shadow-sm border-l-4 border-amber-500">
             <div className="flex justify-between items-start">
               <Statistic
-                title={<span className="text-slate-500 font-medium">Pending Approvals</span>}
+                title={<span className="text-slate-500 font-medium">{t('dashboard.pendingBookings')}</span>}
                 value={stats.pendingBookings}
                 prefix={<Clock className="text-amber-500 mr-2" size={18} />}
               />
-              <Tag color="warning" className="m-0 border-none bg-amber-50 text-amber-600">Action Required</Tag>
+              <Tag color="warning" className="m-0 border-none bg-amber-50 text-amber-600">{t('dashboard.actionRequired', 'Action Required')}</Tag>
             </div>
           </Card>
         </Col>
@@ -102,11 +104,11 @@ export const Dashboard: React.FC = () => {
           <Card bordered={false} className="shadow-sm border-l-4 border-purple-500">
             <div className="flex justify-between items-start">
               <Statistic
-                title={<span className="text-slate-500 font-medium">Active Operations</span>}
+                title={<span className="text-slate-500 font-medium">{t('dashboard.activeOperations')}</span>}
                 value={stats.activeOperations}
                 prefix={<Plane className="text-purple-500 mr-2" size={18} />}
               />
-              <div className="text-xs text-slate-400 mt-2">7 departures today</div>
+              <div className="text-xs text-slate-400 mt-2">{t('dashboard.departuresToday', '7 departures today')}</div>
             </div>
           </Card>
         </Col>
@@ -114,7 +116,7 @@ export const Dashboard: React.FC = () => {
           <Card bordered={false} className="shadow-sm border-l-4 border-green-500">
             <div className="flex justify-between items-start">
               <Statistic
-                title={<span className="text-slate-500 font-medium">Monthly Revenue</span>}
+                title={<span className="text-slate-500 font-medium">{t('dashboard.monthlyRevenue')}</span>}
                 value={stats.monthlyRevenue}
                 prefix={<Wallet className="text-green-500 mr-2" size={18} />}
                 precision={0}
@@ -131,7 +133,7 @@ export const Dashboard: React.FC = () => {
       <Row gutter={[20, 20]}>
         <Col xs={24} lg={16}>
           <Card 
-            title={<div className="flex items-center gap-2"><TrendingUp size={18} /><span>Weekly Air Volume (Tons)</span></div>} 
+            title={<div className="flex items-center gap-2"><TrendingUp size={18} /><span>{t('dashboard.weeklyVolume', 'Weekly Air Volume (Tons)')}</span></div>} 
             className="shadow-sm"
           >
             <div className="h-[300px] w-full">
@@ -155,7 +157,7 @@ export const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Warehouse Capacity" className="shadow-sm">
+          <Card title={t('dashboard.warehouseCapacity', 'Warehouse Capacity')} className="shadow-sm">
             <div className="space-y-6 py-2">
               <div>
                 <div className="flex justify-between mb-2">
@@ -172,15 +174,15 @@ export const Dashboard: React.FC = () => {
                 <Progress percent={45} strokeColor="#8b5cf6" showInfo={false} />
               </div>
               <div className="pt-4 border-t border-slate-100">
-                <Title level={5}>Quick Alerts</Title>
+                <Title level={5}>{t('dashboard.quickAlerts', 'Quick Alerts')}</Title>
                 <div className="space-y-3 mt-3">
                   <div className="flex gap-3 items-start">
                     <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
                       <AlertCircle size={16} />
                     </div>
                     <div>
-                      <Text className="block font-medium text-sm">Credit Overflow: Huawei</Text>
-                      <Text type="secondary" className="text-[11px]">Outstanding balance exceeds limit by ¥50k</Text>
+                      <Text className="block font-medium text-sm">{t('dashboard.creditOverflow', 'Credit Overflow: Huawei')}</Text>
+                      <Text type="secondary" className="text-[11px]">{t('dashboard.balanceLimitExceeded', 'Outstanding balance exceeds limit by ¥50k')}</Text>
                     </div>
                   </div>
                 </div>
@@ -190,7 +192,7 @@ export const Dashboard: React.FC = () => {
         </Col>
       </Row>
 
-      <Card title={<div className="flex items-center gap-2"><CheckCircle size={18} /><span>Recent Operations</span></div>} className="shadow-sm">
+      <Card title={<div className="flex items-center gap-2"><CheckCircle size={18} /><span>{t('dashboard.recentActivities')}</span></div>} className="shadow-sm">
         <Table
           pagination={false}
           loading={loading}
