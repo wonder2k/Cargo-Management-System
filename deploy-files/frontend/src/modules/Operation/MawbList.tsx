@@ -62,10 +62,10 @@ export const MawbList: React.FC = () => {
     }
   };
 
-  const filteredMawbs = mawbs.filter(m => 
-    String(m.mawbNo).toLowerCase().includes(searchText.toLowerCase()) ||
-    String(m.origin).toLowerCase().includes(searchText.toLowerCase()) ||
-    String(m.destination).toLowerCase().includes(searchText.toLowerCase())
+  const filteredMawbs = (mawbs || []).filter(m => 
+    (m.mawbNo?.toLowerCase() || '').includes(searchText.toLowerCase()) ||
+    (m.origin?.toLowerCase() || '').includes(searchText.toLowerCase()) ||
+    (m.destination?.toLowerCase() || '').includes(searchText.toLowerCase())
   );
 
   return (

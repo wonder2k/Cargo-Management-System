@@ -135,7 +135,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App: React.FC = () => {
   const { i18n } = useTranslation();
-  const locale = i18n.language === 'zh' ? zhCN : enUS;
+  const lang = i18n.language || 'zh';
+  const locale = lang.startsWith('zh') ? zhCN : enUS;
 
   return (
     <ConfigProvider 

@@ -17,13 +17,19 @@ export const users = pgTable("users", {
 // 2. Customers Table
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
-  companyName: varchar("company_name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
   contactPerson: varchar("contact_person", { length: 100 }),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
+  type: varchar("type", { length: 50 }).default("direct"), // direct, local_agent, overseas_agent
+  status: varchar("status", { length: 20 }).default("active"),
+  paymentTerms: varchar("payment_terms", { length: 50 }),
   creditLimit: doublePrecision("credit_limit").default(0),
+  creditCurrency: varchar("credit_currency", { length: 10 }).default("CNY"),
   balance: doublePrecision("balance").default(0),
   tier: integer("tier").default(0),
+  countryCode: varchar("country_code", { length: 10 }).default("CN"),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });

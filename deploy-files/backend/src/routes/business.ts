@@ -34,11 +34,28 @@ router.get('/customers', authenticateToken, async (req, res) => {
 });
 
 router.post('/customers', authenticateToken, async (req: any, res) => {
-  const newCustomer = await db.insert(customers).values({
-    ...req.body,
-    creatorId: req.user.id
-  }).returning();
-  res.json(newCustomer[0]);
+  try {
+    const newCustomer = await db.insert(customers).values({
+      ...req.body,
+      creatorId: req.user.id
+    }).returning();
+    res.json(newCustomer[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating customer' });
+  }
+});
+
+router.put('/customers/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.update(customers)
+      .set(req.body)
+      .where(eq(customers.id, parseInt(id)))
+      .returning();
+    res.json(result[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating customer' });
+  }
 });
 
 router.get('/rates', authenticateToken, async (req, res) => {
@@ -46,9 +63,39 @@ router.get('/rates', authenticateToken, async (req, res) => {
   res.json(allRates);
 });
 
-router.post('/rates', authenticateToken, async (req, res) => {
-  const result = await db.insert(rates).values(req.body).returning();
-  res.json(result[0]);
+router.post('/rates', authenticateToken, async (req: any, res) => {
+  try {
+    const result = await db.insert(rates).values({
+      ...req.body,
+      creatorId: req.user.id
+    }).returning();
+    res.json(result[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating rate' });
+  }
+});
+
+router.put('/rates/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.update(rates)
+      .set(req.body)
+      .where(eq(rates.id, parseInt(id)))
+      .returning();
+    res.json(result[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating rate' });
+  }
+});
+
+router.delete('/rates/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.delete(rates).where(eq(rates.id, parseInt(id)));
+    res.json({ message: 'Rate deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting rate' });
+  }
 });
 
 router.get('/bookings', authenticateToken, async (req, res) => {

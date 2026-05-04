@@ -84,7 +84,7 @@ export const MainLayout: React.FC = () => {
   };
 
   const toggleLanguage = () => {
-    const nextLng = i18n.language === 'zh' ? 'en' : 'zh';
+    const nextLng = i18n.language?.startsWith('zh') ? 'en' : 'zh';
     i18n.changeLanguage(nextLng);
   };
 
@@ -152,7 +152,7 @@ export const MainLayout: React.FC = () => {
               icon={<Globe size={18} />} 
               onClick={toggleLanguage}
             >
-              {i18n.language === 'zh' ? 'English' : '中文'}
+              {i18n.language?.startsWith('zh') ? 'English' : '中文'}
             </Button>
             
             <Dropdown menu={{
