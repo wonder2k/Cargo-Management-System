@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PricingList } from './PricingList';
 import { BookingList } from './BookingList';
 import { QuotationHistory } from './QuotationHistory';
-import { CustomerCRMTab } from './CustomerCRMTab';
+import { CustomerList } from './CustomerList';
 
 const { Title, Text } = Typography;
 
@@ -101,7 +101,7 @@ export const BusinessModule: React.FC = () => {
                    <Users size={16} /> <span>{t('common.customers')}</span>
                  </div>
                ),
-               children: <CustomerCRMTab />
+               children: <CustomerList />
             }
           ]}
         />

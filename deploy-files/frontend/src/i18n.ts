@@ -275,6 +275,8 @@ i18n
   .init({
     resources,
     fallbackLng: 'zh',
+    supportedLngs: ['en', 'zh'],
+    load: 'languageOnly',
     interpolation: {
       escapeValue: false,
     },
