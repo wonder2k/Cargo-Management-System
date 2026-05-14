@@ -1,5 +1,5 @@
 import { pgTable, serial, text, timestamp, doublePrecision, varchar, jsonb, boolean, integer } from "drizzle-orm/pg-core";
-import { relations, eq } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 
 // 1. Users Table
 export const users = pgTable("users", {
@@ -7,9 +7,15 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: varchar("name", { length: 255 }),
-  role: varchar("role", { length: 50 }).default("viewer"), // admin, sales, ops, finance
+  role: varchar("role", { length: 50 }).default("viewer"), // admin, business, operation, finance
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
   avatarUrl: text("avatar_url"),
   tier: integer("tier").default(0),
+  companyName: varchar("company_name", { length: 255 }),
+  contactPerson: varchar("contact_person", { length: 100 }),
+  phone: varchar("phone", { length: 50 }),
+  regions: jsonb("regions").default([]),
+  warehouses: jsonb("warehouses").default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -17,12 +23,17 @@ export const users = pgTable("users", {
 // 2. Customers Table
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
-  companyName: varchar("company_name", { length: 255 }).notNull(),
-  contactPerson: varchar("contact_person", { length: 100 }),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  countryCode: varchar("country_code", { length: 10 }).default("CN"),
+  type: varchar("type", { length: 50 }).default("direct"), // direct, local_agent, overseas_agent
+  creditLimit: doublePrecision("credit_limit").default(0),
+  creditCurrency: varchar("credit_currency", { length: 10 }).default("CNY"),
+  balance: doublePrecision("balance").default(0),
+  paymentTerms: varchar("payment_terms", { length: 20 }).default("monthly"),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
-  creditLimit: doublePrecision("credit_limit").default(0),
-  balance: doublePrecision("balance").default(0),
+  status: varchar("status", { length: 20 }).default("active"), // active, frozen
   tier: integer("tier").default(0),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -37,10 +48,10 @@ export const rates = pgTable("rates", {
   flightNo: varchar("flight_no", { length: 20 }),
   aircraftType: varchar("aircraft_type", { length: 50 }),
   schedule: varchar("schedule", { length: 50 }),
-  basePrice: doublePrecision("base_price").notNull(),
+  baseFreight: doublePrecision("base_freight").notNull(),
   fuelSurcharge: doublePrecision("fuel_surcharge").default(0),
-  securityFee: doublePrecision("security_fee").default(0),
-  groundHandling: doublePrecision("ground_handling").default(0),
+  securityScreening: doublePrecision("security_screening").default(0),
+  terminalHandling: doublePrecision("terminal_handling").default(0),
   customsMethods: jsonb("customs_methods"), // { formal: { amount, unit }, 9610: { ... } }
   miscFees: jsonb("misc_fees"), // Array of { name, amount, unit }
   currency: varchar("currency", { length: 10 }).default("CNY"),
@@ -54,7 +65,7 @@ export const rates = pgTable("rates", {
 // 4. Quotes Table
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
-  quoteNo: varchar("quote_no", { length: 50 }).notNull().unique(),
+  quotationNo: varchar("quotation_no", { length: 50 }).notNull().unique(),
   customerId: integer("customer_id").references(() => customers.id),
   customerName: varchar("customer_name", { length: 255 }),
   recipientInfo: text("recipient_info"),
@@ -82,16 +93,16 @@ export const bookings = pgTable("bookings", {
   pieces: integer("pieces"),
   weight: doublePrecision("weight"),
   volume: doublePrecision("volume"),
-  cargoDescription: text("cargo_description"),
-  declaration: varchar("declaration", { length: 50 }),
+  goodsDescription: text("goods_description"),
+  declarationMethod: varchar("declaration_method", { length: 50 }),
   unitPrice: doublePrecision("unit_price"),
   totalAmount: doublePrecision("total_amount"),
   mawbNo: varchar("mawb_no", { length: 50 }),
   shipperInfo: text("shipper_info"),
   consigneeInfo: text("consignee_info"),
-  notifyInfo: text("notify_info"),
+  alsoNotify: text("also_notify"),
   internalNotes: text("internal_notes"),
-  status: varchar("status", { length: 50 }).default("pending"), 
+  status: varchar("status", { length: 50 }).default("pending"),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

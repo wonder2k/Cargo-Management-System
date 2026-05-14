@@ -30,7 +30,7 @@ export const QuotationHistory: React.FC = () => {
   }, []);
 
   const filteredLogs = logs.filter(log => 
-    String(log.quoteNo).toLowerCase().includes(searchText.toLowerCase()) ||
+    String(log.quotationNo).toLowerCase().includes(searchText.toLowerCase()) ||
     String(log.customerName).toLowerCase().includes(searchText.toLowerCase()) ||
     String(log.userName).toLowerCase().includes(searchText.toLowerCase())
   );
@@ -62,7 +62,7 @@ export const QuotationHistory: React.FC = () => {
           columns={[
             {
               title: t('quotes.quoteNo'),
-              dataIndex: 'quoteNo',
+              dataIndex: 'quotationNo',
               render: (text) => <span className="font-mono font-bold text-blue-600">{text}</span>
             },
             {

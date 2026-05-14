@@ -1,20 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import { authApi } from '../services/api';
 
-interface User {
+export interface User {
   id: number;
   email: string;
   name: string;
   role: string;
+  status?: string;
   tier: number;
+  companyName?: string;
+  phone?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: any) => Promise<void>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (data: { email: string; password: string; name?: string; companyName?: string; phone?: string }) => Promise<any>;
   demoLogin: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,9 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async () => {
     try {
-      const response = await api.get('/auth/profile');
+      const response = await authApi.getProfile();
       setUser(response.data);
-    } catch (err) {
+    } catch (_err) {
       setUser(null);
     } finally {
       setLoading(false);
@@ -36,29 +42,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     fetchProfile();
-    
+
     const handleUnauthorized = () => setUser(null);
     window.addEventListener('auth-unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
   }, []);
 
-  const login = async (credentials: any) => {
-    const response = await api.post('/auth/login', credentials);
+  const login = async (credentials: { email: string; password: string }) => {
+    const response = await authApi.login(credentials);
     setUser(response.data.user);
   };
 
+  const register = async (data: { email: string; password: string; name?: string; companyName?: string; phone?: string }) => {
+    const response = await authApi.register(data);
+    if (response.data.user) {
+      setUser(response.data.user);
+    }
+    return response.data;
+  };
+
   const demoLogin = async () => {
-    const response = await api.post('/auth/demo-login');
+    const response = await authApi.demoLogin();
     setUser(response.data.user);
   };
 
   const logout = async () => {
-    await api.post('/auth/logout');
+    await authApi.logout();
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    await fetchProfile();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, demoLogin, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      register,
+      demoLogin,
+      logout,
+      refreshUser,
+      isAdmin: user?.role === 'admin',
+    }}>
       {children}
     </AuthContext.Provider>
   );

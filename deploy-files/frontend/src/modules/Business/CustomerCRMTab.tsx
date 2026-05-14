@@ -30,7 +30,7 @@ export const CustomerCRMTab: React.FC = () => {
             loading={loading}
             rowKey="id"
             columns={[
-                { title: 'Full Name', dataIndex: 'companyName', render: (t) => <Text strong>{t}</Text> },
+                { title: 'Full Name', dataIndex: 'name', render: (t) => <Text strong>{t}</Text> },
                 { title: 'Contact', dataIndex: 'contactPerson' },
                 { title: 'Email', dataIndex: 'email' },
                 { title: 'Phone', dataIndex: 'phone' },
