@@ -35,7 +35,6 @@ export const customers = pgTable("customers", {
   phone: varchar("phone", { length: 50 }),
   status: varchar("status", { length: 20 }).default("active"), // active, frozen
   tier: integer("tier").default(0),
-  countryCode: varchar("country_code", { length: 10 }).default("CN"),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -85,6 +84,7 @@ export const quotes = pgTable("quotes", {
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   bookingNo: varchar("booking_no", { length: 50 }).notNull().unique(),
+  rateId: integer("rate_id"),
   customerId: integer("customer_id").references(() => customers.id),
   customerName: varchar("customer_name", { length: 255 }),
   origin: varchar("origin", { length: 10 }),

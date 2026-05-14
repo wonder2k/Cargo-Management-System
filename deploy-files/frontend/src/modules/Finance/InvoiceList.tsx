@@ -74,7 +74,7 @@ export const InvoiceList: React.FC = () => {
         currency: firstItem.currency,
         issueDate: new Date().toISOString(),
         dueDate: dayjs().add(30, 'day').toISOString(),
-        lineItems: items.map(i => ({ description: `MAWB: ${i.mawbNo}`, amount: i.totalAmount }))
+        lineItems: items.map(i => ({ description: `MAWB ID: ${i.mawbId || '--'}`, amount: i.totalAmount }))
       });
 
       // Update AR items status
@@ -125,7 +125,7 @@ export const InvoiceList: React.FC = () => {
               dataSource={accountsReceivable.filter(ar => ar.status !== 'invoiced')}
               rowKey="id"
               columns={[
-                { title: 'MAWB', dataIndex: 'mawbNo', render: (v) => <span className="font-mono">{v}</span> },
+                { title: 'MAWB ID', dataIndex: 'mawbId', render: (v: any) => <span className="font-mono">{v || '--'}</span> },
                 { title: 'Customer', dataIndex: 'customerId', render: (id) => customers.find(c => c.id === id)?.name || id },
                 { title: 'Amount', render: (_, r) => <Text strong>{r.currency} {r.totalAmount}</Text> },
                 { title: 'Date', dataIndex: 'createdAt', render: (v) => dayjs(v).format('YYYY-MM-DD') }

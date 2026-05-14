@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { mawbs, bookings } from '../db/schema';
-import { eq, desc, like } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -9,7 +9,7 @@ const router = Router();
 // GET all MAWBs (with optional status filter)
 router.get('/mawbs', authenticateToken, async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status } = req.query;
     let query = db.select().from(mawbs);
 
     if (status) {
