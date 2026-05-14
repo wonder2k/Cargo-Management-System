@@ -32,7 +32,7 @@
 
 - 一台 VPS（推荐 2C4G 以上），已安装 **Docker** 和 **Docker Compose**
 - 域名（可选，用于 HTTPS）
-- 开放端口：**80**（HTTP），**443**（HTTPS，如需 SSL）
+- 开放端口：**8080**（HTTP），**443**（HTTPS，如需 SSL）
 
 ---
 
