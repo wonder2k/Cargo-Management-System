@@ -8,7 +8,7 @@ import { authenticateToken, authorizeRole, AuthRequest } from '../middleware/aut
 
 const router = Router();
 
-const setAuthCookies = (res: any, user: any) => {
+const setAuthCookies = (req: any, res: any, user: any) => {
   const userPayload = {
     id: user.id,
     email: user.email,
@@ -24,15 +24,14 @@ const setAuthCookies = (res: any, user: any) => {
     { expiresIn: '24h' }
   );
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-  };
+  // Only set Secure flag when actual HTTPS connection
+  const isHttps = req.headers['x-forwarded-proto'] === 'https' || req.protocol === 'https';
 
   res.cookie('accessToken', accessToken, {
-    ...cookieOptions,
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: 'lax' as const,
+    path: '/',
     maxAge: 86400000, // 24 hours
   });
 };
@@ -69,7 +68,7 @@ router.post('/register', async (req, res) => {
     }).returning();
 
     const user = newUser[0];
-    setAuthCookies(res, user);
+    setAuthCookies(req, res, user);
     res.status(201).json({
       user: {
         id: user.id,
@@ -99,7 +98,7 @@ router.post('/demo-login', async (_req, res) => {
     tier: 10
   };
 
-  setAuthCookies(res, demoUser);
+  setAuthCookies(_req, res, demoUser);
   res.json({ message: 'Demo Login Success', user: demoUser });
 });
 
@@ -113,8 +112,9 @@ router.post('/login', async (req, res) => {
 
   // Bootstrap admin login (only works if no users in DB)
   try {
-    const userCountResult = await db.select({ count: users.id }).from(users);
-    const isEmpty = userCountResult.length === 0;
+    const existingUsers = await db.select({ id: users.id }).from(users).limit(1);
+    const isEmpty = existingUsers.length === 0;
+    console.log(`[Auth] Login attempt for ${email}, DB empty: ${isEmpty}`);
 
     if (email === 'wonder2k@gmail.com' && password === 'admin123' && isEmpty) {
       const passwordHash = await argon2.hash('admin123');
@@ -127,10 +127,11 @@ router.post('/login', async (req, res) => {
         tier: 10,
       }).returning();
 
-      setAuthCookies(res, admin[0]);
+      setAuthCookies(req, res, admin[0]);
       return res.json({ user: { id: admin[0].id, email: admin[0].email, role: admin[0].role, status: admin[0].status, name: admin[0].name, tier: admin[0].tier } });
     }
-  } catch (_e) {
+  } catch (e) {
+    console.error('[Auth] Bootstrap login error:', e);
     // Fall through to normal login if DB query fails
   }
 
@@ -148,7 +149,7 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ message: 'Account registration was rejected.' });
     }
 
-    setAuthCookies(res, user);
+    setAuthCookies(req, res, user);
     res.json({
       user: {
         id: user.id,

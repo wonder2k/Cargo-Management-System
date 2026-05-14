@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh yan@hermes-agent \"cd ~/jcargo-new/deploy-files && docker compose logs backend --tail 50\")"
+    ]
+  }
+}
