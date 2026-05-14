@@ -12,6 +12,7 @@ async function seed() {
     passwordHash,
     name: 'Super Admin',
     role: 'admin',
+    status: 'approved',
     tier: 10
   }).onConflictDoNothing().returning();
 
@@ -30,8 +31,8 @@ async function seed() {
 
   // 3. Create Demo Rates
   const demoRates = [
-    { origin: 'PVG', destination: 'FRA', carrier: 'CA', flightNo: 'CA935', aircraftType: '777F', basePrice: 12.5, creatorId: userId },
-    { origin: 'SZX', destination: 'LAX', carrier: 'CZ', flightNo: 'CZ451', aircraftType: '747F', basePrice: 15.8, creatorId: userId },
+    { origin: 'PVG', destination: 'FRA', carrier: 'CA', flightNo: 'CA935', aircraftType: '777F', baseFreight: 12.5, creatorId: userId },
+    { origin: 'SZX', destination: 'LAX', carrier: 'CZ', flightNo: 'CZ451', aircraftType: '747F', baseFreight: 15.8, creatorId: userId },
   ];
 
   for (const r of demoRates) {

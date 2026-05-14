@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, doublePrecision, varchar, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, doublePrecision, varchar, jsonb, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. Users Table
@@ -33,6 +33,7 @@ export const customers = pgTable("customers", {
   paymentTerms: varchar("payment_terms", { length: 20 }).default("monthly"),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
+  contactPerson: varchar("contact_person", { length: 100 }),
   status: varchar("status", { length: 20 }).default("active"), // active, frozen
   tier: integer("tier").default(0),
   creatorId: integer("creator_id").references(() => users.id),
