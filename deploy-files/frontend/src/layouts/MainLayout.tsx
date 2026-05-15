@@ -110,10 +110,10 @@ export const MainLayout: React.FC = () => {
           height: 64,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: collapsed ? 0 : '0 20px',
+          justifyContent: 'center',
+          padding: '0 12px',
         }}>
-          <img src="/logo.png" alt="JCargo" style={{ height: collapsed ? 28 : 32, width: 'auto', maxWidth: collapsed ? 28 : 160, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="JCargo" style={{ height: collapsed ? 32 : 40, width: '100%', maxWidth: collapsed ? 32 : 200, objectFit: 'contain' }} />
         </div>
         <Menu
           theme="dark"
