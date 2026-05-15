@@ -106,17 +106,14 @@ export const MainLayout: React.FC = () => {
           background: '#0f172a'
         }}
       >
-        <div style={{ 
-          height: 64, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: '0 24px',
-          color: 'white',
-          fontWeight: 'bold',
-          fontSize: 20
+          padding: collapsed ? 0 : '0 20px',
         }}>
-          {collapsed ? 'JC' : 'JCargo CMS'}
+          <img src="/logo.png" alt="JCargo" style={{ height: collapsed ? 28 : 32, width: 'auto', maxWidth: collapsed ? 28 : 160, objectFit: 'contain' }} />
         </div>
         <Menu
           theme="dark"

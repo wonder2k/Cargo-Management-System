@@ -75,7 +75,7 @@ const LoginPage = () => {
         <LangToggle />
         <div className="p-8">
           <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>
+            <img src="/logo.png" alt="JCargo" className="h-10 w-auto" />
           </div>
           <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">JCargo CMS</h2>
           <p className="text-slate-500 text-center mb-8 text-sm">{t('dashboard.overviewSubtitle')}</p>
@@ -200,7 +200,7 @@ const RegisterPage = () => {
         <LangToggle />
         <div className="p-8">
           <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>
+            <img src="/logo.png" alt="JCargo" className="h-10 w-auto" />
           </div>
           <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">{t('common.register_title') || 'Create Account'}</h2>
           <p className="text-slate-500 text-center mb-8 text-sm">{t('common.register_subtitle') || 'Join JCargo Cargo Management System'}</p>
