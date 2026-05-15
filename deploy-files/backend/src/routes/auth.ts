@@ -167,7 +167,7 @@ router.post('/login', async (req, res) => {
 
 // 4. Logout
 router.post('/logout', (_req, res) => {
-  res.clearCookie('accessToken');
+  res.clearCookie('accessToken', { path: '/' });
   res.json({ message: 'Logged out' });
 });
 
