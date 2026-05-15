@@ -158,7 +158,7 @@ router.post('/quotes', authenticateToken, async (req: AuthRequest, res) => {
     }).returning();
     res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create quote' });
+    res.status(500).json({ message: 'Failed to create quote' }); console.error(error);
   }
 });
 
@@ -194,7 +194,7 @@ router.post('/bookings', authenticateToken, async (req: AuthRequest, res) => {
     }).returning();
     res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create booking' });
+    res.status(500).json({ message: 'Failed to create booking' }); console.error(error);
   }
 });
 
