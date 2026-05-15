@@ -166,11 +166,13 @@ export const PDFService = {
   printQuote: (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
     const isZH = lang === 'zh';
 
-    // Logo — same-origin approach (uses current page context, not a popup)
-    const avatarUrl = (profile as any)?.avatarUrl || '';
-    const logoHtml = avatarUrl
-      ? `<img src="${avatarUrl}" style="max-height:48px;max-width:160px;object-fit:contain;" />  <div style="font-size:18px;font-weight:700;color:#1e3a5f;display:none" class="logo-fallback">JCargo</div>`
-      : '<div style="font-size:18px;font-weight:700;color:#1e3a5f;">JCargo</div>';
+    // Logo — use absolute URL for popup window
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const rawAvatar = (profile as any)?.avatarUrl || '';
+    const absLogo = rawAvatar.startsWith('/') ? origin + rawAvatar : rawAvatar;
+    const logoHtml = absLogo
+      ? `<img src="${absLogo}" style="max-height:48px;max-width:160px;object-fit:contain;" />`
+      : '';
 
     const fx = (v: any) => (Number(v) || 0).toFixed(2);
 
@@ -262,7 +264,7 @@ export const PDFService = {
   .info-row .num { font-family: 'Courier New', monospace; font-size: 14px; font-weight: 700; color: #2563eb; }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  th { background: #1e293b; color: #fff; padding: 7px 6px; font-size: 10px; text-align: center; letter-spacing: 0.04em; text-transform: uppercase; }
+  th { background: #1e293b; color: #fff; padding: 7px 6px; font-size: 11px; font-weight: 700; text-align: center; letter-spacing: 0.04em; text-transform: uppercase; }
   td { padding: 6px; border: 1px solid #e2e8f0; font-size: 11px; vertical-align: top; }
   tr:nth-child(even) { background: #fafbfc; }
 
@@ -276,27 +278,14 @@ export const PDFService = {
   .terms-box .item { font-size: 9px; color: #94a3b8; margin: 2px 0; padding-left: 10px; }
 
   .footer-line { text-align: center; font-size: 9px; color: #cbd5e1; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-  @media print { body { margin: 0; padding: 0; } .no-print { display: none !important; } }
-  img[src=""], img:not([src]) { display: none; }
-  img[src] + .logo-fallback { display: none; }
-  img[src]:not([src=""]) + .logo-fallback { display: none; }
 </style>
-<script>
-  // Logo fallback — hide img on error, show text
-  document.addEventListener('DOMContentLoaded', function() {
-    var imgs = document.querySelectorAll('.logo-area img');
-    imgs.forEach(function(img) {
-      img.onerror = function() { this.style.display = 'none'; var fb = this.nextElementSibling; if(fb) fb.style.display = ''; };
-    });
-  });
-</script>
 </head>
 <body>
 
   <!-- Header -->
   <div class="header">
-    <div style="display:flex;align-items:center;gap:10px;">
-      ${logoHtml || '<div style="font-size:18px;font-weight:700;color:#1e3a5f;">JCargo</div>'}
+    <div style="display:flex;align-items:center;gap:10px;min-height:50px;">
+      ${logoHtml || '<span style="font-size:20px;font-weight:700;color:#1e3a5f;">JCargo</span>'}
     </div>
     <div class="company-info">
       <div class="name">${profile?.companyName || 'CargoSystem Global'}</div>
@@ -368,21 +357,25 @@ export const PDFService = {
 
 </body></html>`;
 
-    // Same-window print — same origin so relative image URLs work
-    const printDiv = document.createElement('div');
-    printDiv.innerHTML = html;
-    printDiv.id = 'jcargo-print-container';
-    printDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;z-index:99999;background:#fff;';
-    document.body.appendChild(printDiv);
-
-    const cleanup = () => {
-      const el = document.getElementById('jcargo-print-container');
-      if (el) el.remove();
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    setTimeout(cleanup, 30000);
-    setTimeout(() => { window.print(); }, 300);
+    // Popup window print — sets <base> for URL resolution, <title> for filename
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.document.title = `${quotation.quotationNo}_${(quotation.customerName || 'quote').replace(/[^a-zA-Z0-9]/g, '_')}`;
+    // Wait for images to load before printing
+    const imgs = win.document.querySelectorAll('img');
+    let loaded = 0;
+    if (imgs.length === 0) {
+      setTimeout(() => win.print(), 500);
+    } else {
+      imgs.forEach((img: HTMLImageElement) => {
+        if (img.complete) { loaded++; if (loaded === imgs.length) win.print(); }
+        else { img.onload = () => { loaded++; if (loaded === imgs.length) win.print(); }; img.onerror = () => { loaded++; if (loaded === imgs.length) win.print(); }; }
+      });
+      // Fallback: print after 2s even if images haven't loaded
+      setTimeout(() => win.print(), 2000);
+    }
   },
 
   generateInvoice: (invoice: any, customer: any, mawb?: any) => {
