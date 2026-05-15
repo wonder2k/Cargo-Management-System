@@ -165,37 +165,57 @@ export const PDFService = {
   // HTML-based printable quote — handles Chinese text natively via browser
   printQuote: (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
     const isZH = lang === 'zh';
-    const logoHtml = profile?.avatarUrl
-      ? `<img src="${profile.avatarUrl}" style="max-height:50px;max-width:180px;object-fit:contain;" />`
+    // Use absolute URL for logo (works in new print window)
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const logoUrl = profile?.avatarUrl ? (profile.avatarUrl.startsWith('/') ? baseUrl + profile.avatarUrl : profile.avatarUrl) : '';
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" style="max-height:50px;max-width:180px;object-fit:contain;" onerror="this.style.display='none'" />`
       : '';
 
     const routeRows = quotation.routes.map((r: any) => {
-      const customs = r.customsMethods?.['formal'] || r.customs;
-      const miscText = (r.miscFees || []).map((m: any) =>
-        `${m.name}: ${m.amount} (${m.unit === 'per_kg' ? 'KG' : 'Ship'})`
-      ).join('<br/>');
+      const freightVal = Number(r.finalPrice) || 0;
       const fuelVal = Number(r.fuel) || 0;
       const secVal = Number(r.security) || 0;
       const termVal = Number(r.terminal) || 0;
+      const customs = r.customsMethods?.['formal'] || r.customs;
       const cusVal = Number(customs?.amount) || 0;
-      const cusIsPerKg = customs?.unit === 'per_kg';
-      const breakdownLines = [
-        `Freight: ${r.finalPrice.toFixed(2)}`,
-        ...(fuelVal > 0 ? [`Fuel: ${fuelVal}`] : []),
-        ...(secVal > 0 ? [`Security: ${secVal}`] : []),
-        ...(termVal > 0 ? [`Terminal: ${termVal}`] : []),
-        ...(cusVal > 0 ? [`Customs: ${cusVal} (${cusIsPerKg ? 'KG' : 'Ship'})`] : []),
-        ...((r.miscFees || []).length > 0 ? miscText.split('<br/>') : []),
-      ];
+      const miskKgSum = (r.miscFees || []).reduce((s: number, m: any) => m.unit === 'per_kg' ? s + (Number(m.amount) || 0) : s, 0);
+      const freightPart = freightVal - fuelVal - secVal - termVal - (customs?.unit === 'per_kg' ? cusVal : 0) - miskKgSum;
+
+      // Build breakdown lines — base freight first, then each surcharge
+      const lines: string[] = [];
+      lines.push(`<span style="font-weight:600">${isZH ? '运费' : 'Freight'}:</span> ${freightPart.toFixed(2)}`);
+      if (fuelVal > 0) lines.push(`${isZH ? '燃油附加' : 'Fuel'}: ${fuelVal.toFixed(2)}`);
+      if (secVal > 0) lines.push(`${isZH ? '安检费' : 'Security'}: ${secVal.toFixed(2)}`);
+      if (termVal > 0) lines.push(`${isZH ? '地勤费' : 'Terminal'}: ${termVal.toFixed(2)}`);
+      if (miskKgSum > 0) lines.push(`${isZH ? '杂费(KG)' : 'Misc(KG)'}: ${miskKgSum.toFixed(2)}`);
+      if (cusVal > 0) lines.push(`${isZH ? '报关费(KG)' : 'Customs(KG)'}: ${cusVal.toFixed(2)}`);
+
+      const perKgTotal = Math.max(freightPart, 0) + fuelVal + secVal + termVal + (customs?.unit === 'per_kg' ? cusVal : 0) + miskKgSum;
+      const flatTotal = r.flatFees || 0;
+
       return `<tr>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-family:monospace;text-align:center">${r.origin}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-family:monospace;text-align:center">${r.destination}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:600">${r.carrier}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:11px;color:#64748b">${breakdownLines.join('<br/>')}</td>
-        <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#2563eb">
-          ${quotation.currency} ${Number(r.finalPrice).toFixed(2)}/KG
-          ${r.flatFees > 0 ? `<br/><span style="font-size:10px;color:#d97706">+ ${quotation.currency} ${r.flatFees} (Flat)</span>` : ''}
+        <td style="padding:7px 8px;border:1px solid #e2e8f0;font-family:monospace;font-size:12px;font-weight:700;text-align:center;color:#1e293b">${r.origin}</td>
+        <td style="padding:7px 8px;border:1px solid #e2e8f0;font-family:monospace;font-size:12px;font-weight:700;text-align:center;color:#1e293b">${r.destination}</td>
+        <td style="padding:7px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:12px;text-align:center">${r.carrier}</td>
+        <td style="padding:7px 8px;border:1px solid #e2e8f0;font-size:11px;color:#475569;line-height:1.6">${lines.join('<br/>')}</td>
+        <td style="padding:7px 8px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#2563eb;font-size:13px">
+          ${quotation.currency} ${perKgTotal.toFixed(2)}<span style="font-size:10px;font-weight:400;color:#64748b"> /KG</span>
+          ${flatTotal > 0 ? `<br/><span style="font-size:10px;color:#d97706">+ ${quotation.currency} ${flatTotal.toFixed(2)}<span style="font-weight:400"> /Shipment</span></span>` : ''}
         </td>
+      </tr>`;
+    }).join('');
+
+    // Customs methods comparison row
+    const firstRoute = quotation.routes[0];
+    const allMethods = firstRoute?.customsMethods || {};
+    const methodKeys = ['formal', '9610', '9710', '9810'];
+    const customsRows = methodKeys.filter(k => allMethods[k]).map(k => {
+      const m = allMethods[k];
+      const unitLabel = m.unit === 'per_kg' ? '/KG' : '/Shipment';
+      return `<tr>
+        <td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:10px;font-weight:600;text-align:center;background:#f8fafc">${k.toUpperCase()}</td>
+        <td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:10px;text-align:right;font-family:monospace">${quotation.currency} ${Number(m.amount).toFixed(2)} ${unitLabel}</td>
       </tr>`;
     }).join('');
 
@@ -284,14 +304,34 @@ export const PDFService = {
   <!-- Routes table -->
   <table>
     <thead><tr>
-      <th style="width:12%">${isZH ? '始发站' : 'Origin'}</th>
-      <th style="width:12%">${isZH ? '目的站' : 'Dest'}</th>
-      <th style="width:14%">${isZH ? '航司' : 'Carrier'}</th>
-      <th>${isZH ? '费用明细' : 'Breakdown'}</th>
-      <th style="width:18%">${isZH ? '单价' : 'Unit Price'}</th>
+      <th style="width:12%;background:#1e293b;color:#fff;padding:9px 6px;font-size:12px;font-weight:700;text-align:center;letter-spacing:0.03em;text-transform:uppercase;">${isZH ? '始发站' : 'ORIGIN'}</th>
+      <th style="width:12%;background:#1e293b;color:#fff;padding:9px 6px;font-size:12px;font-weight:700;text-align:center;letter-spacing:0.03em;text-transform:uppercase;">${isZH ? '目的站' : 'DEST'}</th>
+      <th style="width:14%;background:#1e293b;color:#fff;padding:9px 6px;font-size:12px;font-weight:700;text-align:center;letter-spacing:0.03em;text-transform:uppercase;">${isZH ? '航司' : 'CARRIER'}</th>
+      <th style="background:#1e293b;color:#fff;padding:9px 6px;font-size:12px;font-weight:700;text-align:center;letter-spacing:0.03em;text-transform:uppercase;">${isZH ? '费用明细' : 'BREAKDOWN'}</th>
+      <th style="width:20%;background:#1e293b;color:#fff;padding:9px 6px;font-size:12px;font-weight:700;text-align:center;letter-spacing:0.03em;text-transform:uppercase;">${isZH ? '单价' : 'UNIT PRICE'}</th>
     </tr></thead>
     <tbody>${routeRows}</tbody>
   </table>
+
+  <!-- Customs comparison -->
+  ${customsRows ? `
+  <div style="margin-bottom:12px;padding:8px 10px;background:#fafafa;border:1px solid #e2e8f0;">
+    <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px;">${isZH ? '报关方式（按需选其一）' : 'CUSTOMS DECLARATION METHODS (select one)'}</div>
+    <table style="width:auto;border-collapse:collapse;">
+      <tr>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;font-weight:600;text-align:center;background:#f8fafc">FORMAL</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;text-align:right;font-family:monospace">${quotation.currency} ${Number(allMethods['formal']?.amount || 0).toFixed(2)} ${allMethods['formal']?.unit === 'per_kg' ? '/KG' : '/Shipment'}</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;font-weight:600;text-align:center;background:#f8fafc">9610</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;text-align:right;font-family:monospace">${quotation.currency} ${Number(allMethods['9610']?.amount || 0).toFixed(2)} ${allMethods['9610']?.unit === 'per_kg' ? '/KG' : '/Shipment'}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;font-weight:600;text-align:center;background:#f8fafc">9710</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;text-align:right;font-family:monospace">${quotation.currency} ${Number(allMethods['9710']?.amount || 0).toFixed(2)} ${allMethods['9710']?.unit === 'per_kg' ? '/KG' : '/Shipment'}</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;font-weight:600;text-align:center;background:#f8fafc">9810</td>
+        <td style="padding:3px 10px;border:1px solid #e2e8f0;font-size:10px;text-align:right;font-family:monospace">${quotation.currency} ${Number(allMethods['9810']?.amount || 0).toFixed(2)} ${allMethods['9810']?.unit === 'per_kg' ? '/KG' : '/Shipment'}</td>
+      </tr>
+    </table>
+  </div>` : ''}
 
   <!-- Summary -->
   <div class="summary">
