@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
       phone: phone || null,
     }).returning();
 
-    const user = newUser[0];
+    const user = Array.isArray(newUser) ? newUser[0] : newUser;
     setAuthCookies(req, res, user);
     res.status(201).json({
       user: {
@@ -127,8 +127,9 @@ router.post('/login', async (req, res) => {
         tier: 10,
       }).returning();
 
-      setAuthCookies(req, res, admin[0]);
-      return res.json({ user: { id: admin[0].id, email: admin[0].email, role: admin[0].role, status: admin[0].status, name: admin[0].name, tier: admin[0].tier } });
+      const inserted = Array.isArray(admin) ? admin[0] : admin;
+      setAuthCookies(req, res, inserted);
+      return res.json({ user: { id: inserted.id, email: inserted.email, role: inserted.role, status: inserted.status, name: inserted.name, tier: inserted.tier } });
     }
   } catch (e) {
     console.error('[Auth] Bootstrap login error:', e);
@@ -223,7 +224,7 @@ router.put('/users/:id', authenticateToken, authorizeRole(['admin']), async (req
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update user' });
   }

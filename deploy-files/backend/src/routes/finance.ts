@@ -19,7 +19,7 @@ router.get('/ar', authenticateToken, authorizeRole(['admin', 'finance']), async 
 router.post('/ar', authenticateToken, authorizeRole(['admin', 'finance']), async (req, res) => {
   try {
     const result = await db.insert(accountsReceivable).values(req.body).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create AR entry' });
   }
@@ -32,7 +32,7 @@ router.put('/ar/:id', authenticateToken, authorizeRole(['admin', 'finance']), as
       .where(eq(accountsReceivable.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'AR entry not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update AR entry' });
   }
@@ -51,7 +51,7 @@ router.get('/ap', authenticateToken, authorizeRole(['admin', 'finance']), async 
 router.post('/ap', authenticateToken, authorizeRole(['admin', 'finance']), async (req, res) => {
   try {
     const result = await db.insert(accountsPayable).values(req.body).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create AP entry' });
   }
@@ -64,7 +64,7 @@ router.put('/ap/:id', authenticateToken, authorizeRole(['admin', 'finance']), as
       .where(eq(accountsPayable.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'AP entry not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update AP entry' });
   }
@@ -83,7 +83,7 @@ router.get('/invoices', authenticateToken, authorizeRole(['admin', 'finance']), 
 router.post('/invoices', authenticateToken, authorizeRole(['admin', 'finance']), async (req, res) => {
   try {
     const result = await db.insert(invoices).values(req.body).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create invoice' });
   }
@@ -96,7 +96,7 @@ router.put('/invoices/:id', authenticateToken, authorizeRole(['admin', 'finance'
       .where(eq(invoices.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Invoice not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update invoice' });
   }

@@ -65,7 +65,7 @@ router.post('/customers', authenticateToken, async (req: AuthRequest, res) => {
       ...req.body,
       creatorId: req.user!.id
     }).returning();
-    res.json(newCustomer[0]);
+    res.json(Array.isArray(newCustomer) ? newCustomer[0] : newCustomer);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create customer' });
   }
@@ -78,7 +78,7 @@ router.put('/customers/:id', authenticateToken, async (req, res) => {
       .where(eq(customers.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Customer not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update customer' });
   }
@@ -110,7 +110,7 @@ router.post('/rates', authenticateToken, async (req: AuthRequest, res) => {
       ...req.body,
       creatorId: req.user!.id
     }).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create rate' });
   }
@@ -123,7 +123,7 @@ router.put('/rates/:id', authenticateToken, async (req, res) => {
       .where(eq(rates.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Rate not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update rate' });
   }
@@ -156,7 +156,7 @@ router.post('/quotes', authenticateToken, async (req: AuthRequest, res) => {
       creatorId: req.user!.id,
       userName: req.user!.name
     }).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create quote' });
   }
@@ -169,7 +169,7 @@ router.put('/quotes/:id', authenticateToken, async (req, res) => {
       .where(eq(quotes.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Quote not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update quote' });
   }
@@ -192,7 +192,7 @@ router.post('/bookings', authenticateToken, async (req: AuthRequest, res) => {
       bookingNo: `BK-${Date.now().toString().slice(-6)}`,
       creatorId: req.user!.id
     }).returning();
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create booking' });
   }
@@ -205,7 +205,7 @@ router.put('/bookings/:id', authenticateToken, async (req, res) => {
       .where(eq(bookings.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Booking not found' });
-    res.json(result[0]);
+    res.json(Array.isArray(result) ? result[0] : result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to update booking' });
   }

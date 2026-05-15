@@ -30,7 +30,7 @@ router.post('/mawbs', authenticateToken, async (req: AuthRequest, res) => {
       ...req.body,
       mawbNo: req.body.mawbNo || `MAWB-${Date.now().toString().slice(-6)}`,
     }).returning();
-    res.status(201).json(newMawb[0]);
+    res.status(201).json(Array.isArray(newMawb) ? newMawb[0] : newMawb);
   } catch (error) {
     res.status(500).json({ message: 'Failed to create MAWB' });
   }
@@ -104,7 +104,7 @@ router.get('/stats', authenticateToken, async (_req, res) => {
 
 // CREATE MAWB FROM BOOKING (finalization)
 router.post('/mawbs/from-booking', authenticateToken, async (req: AuthRequest, res) => {
-  const { bookingNo, mawbNo, warehouseId, entryTime, weight, chargeableWeight, pieces, volume, dimensions } = req.body;
+  const { bookingNo, mawbNo, warehouseId, entryTime, weight, chargeableWeight, pieces, volume } = req.body;
   if (!bookingNo || !mawbNo) return res.status(400).json({ message: 'bookingNo and mawbNo required' });
 
   try {

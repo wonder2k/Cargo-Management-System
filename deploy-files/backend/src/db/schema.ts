@@ -71,7 +71,7 @@ export const quotes = pgTable("quotes", {
   customerName: varchar("customer_name", { length: 255 }),
   recipientInfo: text("recipient_info"),
   routes: jsonb("routes"), // Array of quoted routes with adjusted prices
-  totalAmount: doublePrecision("total_amount").notNull(),
+  totalAmount: doublePrecision("total_amount"),
   currency: varchar("currency", { length: 10 }).default("CNY"),
   status: varchar("status", { length: 20 }).default("sent"), // sent, accepted, rejected, expired
   validUntil: timestamp("valid_until"),
