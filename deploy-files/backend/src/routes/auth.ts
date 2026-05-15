@@ -172,9 +172,20 @@ router.post('/logout', (_req, res) => {
   res.json({ message: 'Logged out' });
 });
 
-// 5. Get current profile
-router.get('/profile', authenticateToken, (req: AuthRequest, res) => {
-  res.json(req.user);
+// 5. Get current profile (full user from DB, not just JWT payload)
+router.get('/profile', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const rows = await db.select().from(users).where(eq(users.id, req.user!.id));
+    if (!rows || rows.length === 0) return res.status(404).json({ message: 'User not found' });
+    const u = rows[0];
+    res.json({
+      id: u.id, email: u.email, name: u.name,
+      role: u.role, status: u.status, tier: u.tier,
+      companyName: u.companyName, phone: u.phone,
+      contactPerson: u.contactPerson, avatarUrl: u.avatarUrl,
+      regions: u.regions, warehouses: u.warehouses,
+    });
+  } catch { res.status(500).json({ message: 'Failed to fetch profile' }); }
 });
 
 // 6. List all users (admin only)

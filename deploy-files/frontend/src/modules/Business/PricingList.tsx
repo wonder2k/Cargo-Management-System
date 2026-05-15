@@ -126,12 +126,8 @@ export const PricingList: React.FC = () => {
   };
 
   const getFlatFees = (rate: FlightRate) => {
-    let total = 0;
-    const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
-    if (formalCustoms?.unit === 'per_shipment') total += formalCustoms.amount;
-    const miscFlatAmount = (rate.miscFees || []).reduce((sum, item) => item.unit === 'per_shipment' ? sum + item.amount : sum, 0);
-    total += miscFlatAmount;
-    return total;
+    // Flat fees = per-shipment misc charges only (customs excluded — selected per booking)
+    return (rate.miscFees || []).reduce((sum, item) => item.unit === 'per_shipment' ? sum + item.amount : sum, 0);
   };
 
   const handleOpenPreview = async (values: any) => {
@@ -333,7 +329,7 @@ export const PricingList: React.FC = () => {
                   const flatFees = getFlatFees(r);
                   const flatBreakdown = flatFees > 0 ? (
                     <div className="text-xs space-y-1" style={{ minWidth: 180 }}>
-                      <div className="font-bold text-amber-700 mb-1">Per-Shipment Fees</div>
+                      <div className="font-bold text-amber-700 mb-1">Per-Shipment Charges</div>
                       {(r.miscFees || []).filter((m: any) => m.unit === 'per_shipment').map((m: any, i: number) => (
                         <div key={i} className="flex justify-between gap-4"><span>{m.name}:</span><span className="font-mono">{r.currency} {Number(m.amount).toFixed(2)}</span></div>
                       ))}
