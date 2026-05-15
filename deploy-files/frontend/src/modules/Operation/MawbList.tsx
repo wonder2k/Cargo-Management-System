@@ -320,7 +320,7 @@ export const MawbList: React.FC = () => {
       ),
     },
     {
-      title: 'Route',
+      title: t('common.route') || 'Route',
       render: (_: any, r: MAWB) => <Tag color="blue">{r.origin} → {r.destination}</Tag>,
     },
     {
@@ -332,7 +332,7 @@ export const MawbList: React.FC = () => {
       },
     },
     {
-      title: 'Cargo',
+      title: t('common.cargo') || 'Cargo',
       render: (_: any, r: MAWB) => (
         <div className="text-xs">
           {r.pieces || 0} PCS / {r.weight || 0} KG
@@ -348,7 +348,7 @@ export const MawbList: React.FC = () => {
         return (
           <Space>
             {(r.status === 'warehouse_in' || r.status === 'customs') && (
-              <Tooltip title="Upload Draft MAWB">
+              <Tooltip title={t('common.upload')+' Draft MAWB'}>
                 <Button size="small" icon={<UploadIcon size={14} />}
                   onClick={() => { setDraftTarget(r); setDraftModalOpen(true); }} />
               </Tooltip>
@@ -367,7 +367,7 @@ export const MawbList: React.FC = () => {
   // ==== Pending Bookings Columns ====
   const pendingCols = [
     {
-      title: 'Booking No',
+      title: t('common.bookingNo') || 'Booking No',
       render: (_: any, r: Booking) => (
         <span className="font-mono font-bold text-blue-600 cursor-pointer"
           onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
@@ -377,11 +377,11 @@ export const MawbList: React.FC = () => {
     },
     { title: t('common.customer'), dataIndex: 'customerName' },
     {
-      title: 'Route',
+      title: t('common.route') || 'Route',
       render: (_: any, r: Booking) => <Tag color="geekblue">{r.origin} → {r.destination}</Tag>,
     },
     {
-      title: 'Cargo',
+      title: t('common.cargo') || 'Cargo',
       render: (_: any, r: Booking) => (
         <div className="text-xs">
           {r.pieces}P / {r.weight}K / {r.volume}C
@@ -428,7 +428,7 @@ export const MawbList: React.FC = () => {
   // ==== Finished Bookings Columns ====
   const finishedCols = [
     {
-      title: 'Booking',
+      title: t('common.bookingNo') || 'Booking',
       render: (_: any, r: Booking) => (
         <span className="font-mono font-bold text-blue-600 cursor-pointer"
           onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
@@ -442,7 +442,7 @@ export const MawbList: React.FC = () => {
     },
     { title: t('common.customer'), dataIndex: 'customerName' },
     {
-      title: 'Route',
+      title: t('common.route') || 'Route',
       render: (_: any, r: Booking) => <Tag>{r.origin} → {r.destination}</Tag>,
     },
     {

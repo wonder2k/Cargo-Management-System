@@ -71,7 +71,7 @@ export const QuotationHistory: React.FC = () => {
               render: (name) => <span className="font-semibold text-slate-700">{name}</span>
             },
             {
-              title: 'Routes',
+              title: t('common.route') || 'Routes',
               dataIndex: 'routes',
               render: (routes: any[]) => (
                 <div className="flex flex-wrap gap-1">

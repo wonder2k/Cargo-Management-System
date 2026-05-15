@@ -245,15 +245,15 @@ export const PricingList: React.FC = () => {
           </Space>
           {selectedRateIds.length > 0 && (
               <div className="bg-slate-50 px-4 py-2 rounded-lg border border-dashed border-slate-300 flex items-center gap-4">
-                  <Text style={{ fontSize: 13 }}>Adjustment:</Text>
-                  <Select 
-                      size="small" 
-                      value={adjustmentType} 
+                  <Text style={{ fontSize: 13 }}>{t('pricing.adjustment') || 'Adjustment'}:</Text>
+                  <Select
+                      size="small"
+                      value={adjustmentType}
                       onChange={(v: any) => setAdjustmentType(v)}
                       options={[
-                          { label: 'Percentage (+%)', value: 'percent' },
-                          { label: 'Fixed Amount (+Value)', value: 'fixed' },
-                          { label: 'Manual Adjustment', value: 'manual' }
+                          { label: t('common.adjustPercent') || 'Percentage (+%)', value: 'percent' },
+                          { label: t('common.adjustFixed') || 'Fixed Amount (+Value)', value: 'fixed' },
+                          { label: t('common.adjustManual') || 'Manual Adjustment', value: 'manual' }
                       ]}
                       style={{ width: 160 }}
                   />
@@ -298,14 +298,14 @@ export const PricingList: React.FC = () => {
               )
             },
             {
-              title: 'Base Price',
+              title: t('pricing.baseFreight') || 'Base Price',
               render: (_, r) => {
                 const tieredBase = getTierAdjustedBase(r);
                 return <span className="font-mono font-bold text-slate-700">{r.currency} {tieredBase.toFixed(2)}</span>;
               }
             },
             {
-              title: 'Final Price',
+              title: t('pricing.finalPrice') || 'Final Price',
               render: (_, r) => {
                   const finalPrice = calculateFinalPrice(r);
                   const formalCustoms = r.customsMethods?.['formal'] || r.customsClearance;
@@ -391,16 +391,16 @@ export const PricingList: React.FC = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate}>
           <Row gutter={16}>
-             <Col span={6}><Form.Item name="origin" label="Origin" rules={[{ required: true }]}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="destination" label="Destination" rules={[{ required: true }]}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="carrier" label="Carrier" rules={[{ required: true }]}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="region" label="Region" initialValue="AsiaPacific"><Select options={[{label:'AsiaPacific',value:'AsiaPacific'},{label:'Americas',value:'Americas'},{label:'Europe',value:'Europe'}]} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="origin" label={t('common.origin')||'Origin'} rules={[{ required: true }]}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="destination" label={t('common.destination')||'Destination'} rules={[{ required: true }]}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="carrier" label={t('common.carrier')||'Carrier'} rules={[{ required: true }]}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="region" label={t('common.region')||'Region'} initialValue="AsiaPacific"><Select options={[{label:'AsiaPacific',value:'AsiaPacific'},{label:'Americas',value:'Americas'},{label:'Europe',value:'Europe'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
-             <Col span={6}><Form.Item name="flightNo" label="Flight No"><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="aircraftType" label="Aircraft"><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="schedule" label="Schedule"><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="currency" label="Currency" initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
              <Col span={6}><Form.Item name="baseFreight" label="Base Price (/KG)" rules={[{ required: true }]}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
