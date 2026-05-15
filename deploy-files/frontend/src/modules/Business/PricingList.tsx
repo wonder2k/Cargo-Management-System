@@ -24,7 +24,7 @@ export const PricingList: React.FC = () => {
   const [pendingQuotation, setPendingQuotation] = useState<any>(null);
   
   const { user: profile } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const [quoteForm] = Form.useForm();
   const { message } = App.useApp();
@@ -73,21 +73,24 @@ export const PricingList: React.FC = () => {
   const handleFinalConfirm = async () => {
     if (!pendingQuotation) return;
     try {
-      const customer = customers.find(c => c.id === pendingQuotation.customerId);
-      
-      // Generate PDF
-      PDFService.generateProposal(pendingQuotation, customer, profile);
-
-      // Save Quotation to DB
+      // Save Quotation to DB (do this first)
       await businessApi.createQuote(pendingQuotation);
-
       message.success(t('common.success'));
       setPreviewModalOpen(false);
       setSelectedRateIds([]);
       quoteForm.resetFields();
       setCustomPrices({});
     } catch (e: any) {
-      message.error(t('common.error') + ': Operation failed');
+      message.error(t('common.error'));
+    }
+
+    // Generate PDF (separate try-catch so save is not blocked by PDF errors)
+    try {
+      const customer = customers.find(c => String(c.id) === String(pendingQuotation.customerId));
+      const currentLang = i18n.language?.startsWith('zh') ? 'zh' : 'en';
+      PDFService.generateProposal(pendingQuotation, customer, profile, currentLang);
+    } catch (e) {
+      console.error('PDF generation error:', e);
     }
   };
 
@@ -312,15 +315,34 @@ export const PricingList: React.FC = () => {
               dataIndex: 'baseFreight',
               render: (v, r) => <span className="font-mono text-slate-600">{r.currency} {v}</span>
             },
-            { 
-              title: 'Final Price', 
+            {
+              title: 'Final Price',
               render: (_, r) => {
                   const finalPrice = calculateFinalPrice(r);
+                  const formalCustoms = r.customsMethods?.['formal'] || r.customsClearance;
+                  const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
+                  const miscPerKgAmount = (r.miscFees || []).reduce((sum, item) =>
+                    item.unit === 'per_kg' ? sum + item.amount : sum, 0);
+
+                  const breakdown = (
+                    <div className="text-xs space-y-1" style={{ minWidth: 200 }}>
+                      <div className="flex justify-between gap-4"><span>Base Freight:</span><span className="font-mono">{r.baseFreight.toFixed(2)}</span></div>
+                      {r.fuelSurcharge > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Fuel:</span><span className="font-mono">+{r.fuelSurcharge.toFixed(2)}</span></div>}
+                      {r.securityScreening > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Security:</span><span className="font-mono">+{r.securityScreening.toFixed(2)}</span></div>}
+                      {r.terminalHandling > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Terminal:</span><span className="font-mono">+{r.terminalHandling.toFixed(2)}</span></div>}
+                      {customsAmount > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Customs (KG):</span><span className="font-mono">+{customsAmount.toFixed(2)}</span></div>}
+                      {miscPerKgAmount > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Misc (KG):</span><span className="font-mono">+{miscPerKgAmount.toFixed(2)}</span></div>}
+                      <div className="border-t pt-1 flex justify-between font-bold text-blue-600"><span>Total / KG:</span><span className="font-mono">{finalPrice.toFixed(2)}</span></div>
+                    </div>
+                  );
+
                   return (
                       <div className="flex flex-col">
-                          <span className="text-sm font-bold text-blue-600">
+                          <Popover content={breakdown} title="Price Breakdown" trigger="hover">
+                            <span className="text-sm font-bold text-blue-600 cursor-help border-b border-dotted border-blue-300">
                               {r.currency} {finalPrice.toFixed(2)} / KG
-                          </span>
+                            </span>
+                          </Popover>
                           {getFlatFees(r) > 0 && (
                             <span className="text-[10px] text-amber-600 font-bold">
                               + {r.currency} {getFlatFees(r)} (Flat)
