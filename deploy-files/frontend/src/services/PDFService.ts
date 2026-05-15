@@ -6,9 +6,13 @@ import { Booking, Warehouse } from '../types';
 
 const localize = (text: string | null | undefined): string => {
   if (!text) return "";
-  const halfWidth = text.replace(/[！-～]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)).replace(/　/g, ' ');
-  if (/^[\x00-\x7F]*$/.test(halfWidth)) return halfWidth;
-  return halfWidth.replace(/[一-龥]+/g, (match) => pinyin(match, { toneType: 'none' }) + " ").replace(/\s+/g, ' ').trim();
+  try {
+    const halfWidth = text.replace(/[！-～]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)).replace(/　/g, ' ');
+    if (/^[\x00-\x7F]*$/.test(halfWidth)) return halfWidth;
+    return halfWidth.replace(/[一-龥]+/g, (match) => pinyin(match, { toneType: 'none' }) + " ").replace(/\s+/g, ' ').trim();
+  } catch {
+    return text.replace(/[^\x00-\x7F]/g, '').trim();
+  }
 };
 
 // Text labels based on language

@@ -102,35 +102,27 @@ export const PricingList: React.FC = () => {
     ? customers.find(c => c.name === (localStorage.getItem('simulation_user') || (isAgent ? (profile as any)?.companyName : ''))) 
     : null;
 
-  const calculateFinalPrice = (rate: FlightRate, targetCustomer?: Customer) => {
-    let freight = rate.baseFreight;
-    let effectiveTier = 0;
-    
-    if (targetCustomer) {
-        effectiveTier = targetCustomer.tier || 0;
-    } else if (isAdmin && isSimulation) {
-        effectiveTier = agentCustomer?.tier || 0;
-    } else {
-        effectiveTier = profile?.tier || 0;
-    }
-    
-    if (effectiveTier) {
-        freight += (rate.currency === 'CNY' ? 0.5 : 0.2) * effectiveTier;
-    }
+  // Tier-adjusted base price (logged-in user's tier × 0.5 CNY / 0.2 USD)
+  const getTierAdjustedBase = (rate: FlightRate) => {
+    const tier = profile?.tier || 0;
+    const adj = (rate.currency === 'CNY' ? 0.5 : 0.2) * tier;
+    return rate.baseFreight + adj;
+  };
 
-    const adjustedFreight = adjustmentType === 'manual' 
-      ? (customPrices[rate.id] || freight) 
-      : (adjustmentType === 'percent' ? freight * (1 + adjustmentValue / 100) : freight + adjustmentValue);
-    
+  const calculateFinalPrice = (rate: FlightRate) => {
+    const tieredBase = getTierAdjustedBase(rate);
+    const adjustedBase = adjustmentType === 'manual'
+      ? (customPrices[rate.id] || tieredBase)
+      : (adjustmentType === 'percent' ? tieredBase * (1 + adjustmentValue / 100) : tieredBase + adjustmentValue);
+
     const fuel = rate.fuelSurcharge || 0;
     const security = rate.securityScreening || 0;
     const terminal = rate.terminalHandling || 0;
-    
     const formalCustoms = rate.customsMethods?.['formal'] || rate.customsClearance;
     const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
     const miscPerKgAmount = (rate.miscFees || []).reduce((sum, item) => item.unit === 'per_kg' ? sum + item.amount : sum, 0);
-    
-    return adjustedFreight + fuel + security + terminal + customsAmount + miscPerKgAmount;
+
+    return adjustedBase + fuel + security + terminal + customsAmount + miscPerKgAmount;
   };
 
   const getFlatFees = (rate: FlightRate) => {
@@ -172,7 +164,7 @@ export const PricingList: React.FC = () => {
         destination: r.destination,
         carrier: r.carrier,
         basePrice: r.baseFreight,
-        finalPrice: calculateFinalPrice(r, customer || agentCustomer || undefined),
+        finalPrice: calculateFinalPrice(r),
         adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
                    adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual',
         fuel: r.fuelSurcharge,
@@ -185,7 +177,6 @@ export const PricingList: React.FC = () => {
       currency: selectedRates[0].currency,
       validUntil: values.validUntil,
       status: 'sent',
-      createdAt: new Date().toISOString(),
       creatorId: profile?.id,
       userName: profile?.name || 'System User',
     };
@@ -310,10 +301,18 @@ export const PricingList: React.FC = () => {
                 </div>
               )
             },
-            { 
-              title: 'Base Price', 
-              dataIndex: 'baseFreight',
-              render: (v, r) => <span className="font-mono text-slate-600">{r.currency} {v}</span>
+            {
+              title: 'Base Price' + ((profile?.tier || 0) > 0 ? ` (Tier${profile?.tier})` : ''),
+              render: (_, r) => {
+                const tieredBase = getTierAdjustedBase(r);
+                const showAdj = (profile?.tier || 0) > 0 && tieredBase > r.baseFreight;
+                return (
+                  <div className="flex flex-col">
+                    <span className="font-mono font-bold text-slate-700">{r.currency} {tieredBase.toFixed(2)}</span>
+                    {showAdj && <span className="text-[10px] text-orange-500">base {r.baseFreight}+tier</span>}
+                  </div>
+                );
+              }
             },
             {
               title: 'Final Price',
@@ -323,10 +322,12 @@ export const PricingList: React.FC = () => {
                   const customsAmount = formalCustoms?.unit === 'per_kg' ? (formalCustoms?.amount || 0) : 0;
                   const miscPerKgAmount = (r.miscFees || []).reduce((sum, item) =>
                     item.unit === 'per_kg' ? sum + item.amount : sum, 0);
+                  const tieredBase = getTierAdjustedBase(r);
 
                   const breakdown = (
                     <div className="text-xs space-y-1" style={{ minWidth: 200 }}>
-                      <div className="flex justify-between gap-4"><span>Base Freight:</span><span className="font-mono">{r.baseFreight.toFixed(2)}</span></div>
+                      <div className="flex justify-between gap-4"><span>Base + Tier:</span><span className="font-mono">{r.baseFreight.toFixed(2)}{(profile?.tier||0)>0?` + ${((r.currency==='CNY'?0.5:0.2)*(profile?.tier||0)).toFixed(2)}`:''}</span></div>
+                      <div className="flex justify-between gap-4 text-blue-700 font-bold"><span>Tiered Base:</span><span className="font-mono">{tieredBase.toFixed(2)}</span></div>
                       {r.fuelSurcharge > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Fuel:</span><span className="font-mono">+{r.fuelSurcharge.toFixed(2)}</span></div>}
                       {r.securityScreening > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Security:</span><span className="font-mono">+{r.securityScreening.toFixed(2)}</span></div>}
                       {r.terminalHandling > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Terminal:</span><span className="font-mono">+{r.terminalHandling.toFixed(2)}</span></div>}
@@ -336,6 +337,16 @@ export const PricingList: React.FC = () => {
                     </div>
                   );
 
+                  const flatFees = getFlatFees(r);
+                  const flatBreakdown = flatFees > 0 ? (
+                    <div className="text-xs space-y-1" style={{ minWidth: 180 }}>
+                      <div className="font-bold text-amber-700 mb-1">Per-Shipment Fees</div>
+                      {(r.miscFees || []).filter((m: any) => m.unit === 'per_shipment').map((m: any, i: number) => (
+                        <div key={i} className="flex justify-between gap-4"><span>{m.name}:</span><span className="font-mono">{r.currency} {Number(m.amount).toFixed(2)}</span></div>
+                      ))}
+                    </div>
+                  ) : null;
+
                   return (
                       <div className="flex flex-col">
                           <Popover content={breakdown} title="Price Breakdown" trigger="hover">
@@ -343,10 +354,12 @@ export const PricingList: React.FC = () => {
                               {r.currency} {finalPrice.toFixed(2)} / KG
                             </span>
                           </Popover>
-                          {getFlatFees(r) > 0 && (
-                            <span className="text-[10px] text-amber-600 font-bold">
-                              + {r.currency} {getFlatFees(r)} (Flat)
-                            </span>
+                          {flatFees > 0 && flatBreakdown && (
+                            <Popover content={flatBreakdown} title="Flat Fee Breakdown" trigger="hover">
+                              <span className="text-[10px] text-amber-600 font-bold cursor-help border-b border-dotted border-amber-300">
+                                + {r.currency} {flatFees.toFixed(2)} (Flat)
+                              </span>
+                            </Popover>
                           )}
                       </div>
                   );

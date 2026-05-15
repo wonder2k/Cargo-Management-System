@@ -1,0 +1,24 @@
+#!/bin/bash
+# JCargo CMS — Full clean deploy (rebuild + DB migration + seed)
+set -e
+
+cd deploy-files
+docker compose down
+cd ..
+git pull origin main
+cd deploy-files
+docker compose up --build -d
+
+# Wait for PostgreSQL to be ready
+echo "⏳ Waiting for database..."
+sleep 5
+
+# Run DB migration (schema changes)
+echo "📦 Running DB migration..."
+docker compose exec -T backend sh -c "npx drizzle-kit push" 2>/dev/null || echo "⚠️ Migration skipped (may need manual run)"
+
+# Seed initial data (if not already seeded)
+echo "🌱 Running DB seed..."
+docker compose exec -T backend sh -c "npm run db:seed" 2>/dev/null || echo "⚠️ Seed skipped (may already exist)"
+
+echo "✅ Full deploy complete"

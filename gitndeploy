@@ -1,0 +1,10 @@
+#!/bin/bash
+# JCargo CMS — Quick deploy (rebuild & restart)
+set -e
+cd deploy-files
+docker compose down
+cd ..
+git pull origin main
+cd deploy-files
+docker compose up --build -d
+echo "✅ Deploy complete"

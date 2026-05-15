@@ -50,10 +50,17 @@ router.get('/dashboard-stats', authenticateToken, async (_req, res) => {
 });
 
 // ====== Customers CRUD ======
-router.get('/customers', authenticateToken, async (_req, res) => {
+router.get('/customers', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const allCustomers = await db.select().from(customers).orderBy(desc(customers.createdAt));
-    res.json(allCustomers);
+    let result;
+    if (req.user?.role === 'admin') {
+      result = await db.select().from(customers).orderBy(desc(customers.createdAt));
+    } else {
+      result = await db.select().from(customers)
+        .where(eq(customers.creatorId, req.user!.id))
+        .orderBy(desc(customers.createdAt));
+    }
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch customers' });
   }
@@ -152,8 +159,10 @@ router.get('/quotes', authenticateToken, async (_req, res) => {
 router.post('/quotes', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const body = { ...req.body };
-    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
-    if (body.flightDate && typeof body.flightDate === 'string') body.flightDate = new Date(body.flightDate);
+    // Convert string timestamps to Date objects for Drizzle ORM
+    for (const key of ['validUntil', 'flightDate', 'createdAt']) {
+      if (body[key] && typeof body[key] === 'string') body[key] = new Date(body[key]);
+    }
     const result = await db.insert(quotes).values({
       ...body,
       creatorId: req.user!.id,
@@ -193,8 +202,9 @@ router.get('/bookings', authenticateToken, async (_req, res) => {
 router.post('/bookings', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const body = { ...req.body };
-    if (body.flightDate && typeof body.flightDate === 'string') body.flightDate = new Date(body.flightDate);
-    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
+    for (const key of ['validUntil', 'flightDate', 'createdAt']) {
+      if (body[key] && typeof body[key] === 'string') body[key] = new Date(body[key]);
+    }
     const result = await db.insert(bookings).values({
       ...body,
       bookingNo: `BK-${Date.now().toString().slice(-6)}`,
