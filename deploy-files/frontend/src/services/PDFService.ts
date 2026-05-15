@@ -304,7 +304,7 @@ export const PDFService = {
     <div class="company-info">
       <div class="name">${profile?.companyName || 'CargoSystem Global'}</div>
       <div class="detail">${isZH?'联系人':'Contact'}: ${profile?.contactPerson || profile?.name || '-'}</div>
-      <div class="detail">${isZH?'电话':'Tel'}: ${profile?.phone || '-'} | Email: ${profile?.email || ''}</div>
+      <div class="detail">${isZH?'电话':'Tel'}: ${profile?.phone || '-'} | ${isZH?'邮箱':'Email'}: ${profile?.email || ''}</div>
     </div>
   </div>
 

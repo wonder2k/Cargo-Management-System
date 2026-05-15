@@ -157,7 +157,8 @@ const resources = {
         proposalFor: "Proposal For",
         pdfNote: "Your company logo and contact details will be embedded in the final PDF.",
         other: "Other Charges",
-        customs: "Customs Declaration"
+        customs: "Customs Declaration",
+        adjustment: "Adjustment"
       },
       quotes: {
         title: "Quotation History",
@@ -446,7 +447,8 @@ const resources = {
         proposalFor: "报价对象",
         pdfNote: "您的公司Logo和联系方式将自动嵌入PDF中。",
         other: "其他费用",
-        customs: "报关方式"
+        customs: "报关方式",
+        adjustment: "价格调整"
       },
       quotes: {
         title: "报价单记录",

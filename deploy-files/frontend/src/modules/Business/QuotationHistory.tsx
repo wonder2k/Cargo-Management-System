@@ -77,24 +77,28 @@ export const QuotationHistory: React.FC = () => {
                 <div className="flex flex-wrap gap-1">
                   {(routes || []).map((r, idx) => (
                     <Tag key={idx} icon={<MapPin size={10} />} color="blue">
-                      {r.origin}-{r.destination} @ {r.finalPrice}
+                      {r.origin}-{r.destination} @ {Number(r.finalPrice).toFixed(2)}
                     </Tag>
                   ))}
                 </div>
               )
             },
             {
-              title: 'User',
+              title: t('common.user') || 'User',
               dataIndex: 'userName',
               render: (name) => <span className="text-sm text-slate-600">{name || 'N/A'}</span>
             },
             {
-              title: 'Date',
-              dataIndex: 'createdAt',
-              render: (t) => <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(t).format('YYYY-MM-DD HH:mm')}</Text>
+              title: t('common.date') || 'Date',
+              render: (_, r) => (
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{dayjs(r.createdAt).format('YYYY-MM-DD HH:mm')}</Text>
+                  {r.validUntil && <Text type="secondary" style={{ fontSize: 10, color: '#d97706' }}>↗ {dayjs(r.validUntil).format('YYYY-MM-DD')}</Text>}
+                </div>
+              )
             },
             {
-              title: 'Action',
+              title: t('common.action') || 'Action',
               align: 'right',
               render: () => <Button type="text" icon={<Download size={14} />} disabled />
             }
