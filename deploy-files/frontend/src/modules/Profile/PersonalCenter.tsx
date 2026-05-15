@@ -82,9 +82,10 @@ export const PersonalCenter: React.FC = () => {
           <Space direction="vertical" className="w-full" size="middle">
             <Card className="text-center shadow-sm border-slate-200">
               {avatarUrl ? (
-                <Image src={avatarUrl} preview={{ mask: null }}
-                  style={{ width: 80, height: 80, borderRadius: 40, objectFit: 'cover' }}
-                  className="mb-4 inline-block" />
+                <div className="mb-4 flex justify-center">
+                  <Image src={avatarUrl} preview={{ mask: null }}
+                    style={{ maxWidth: '100%', maxHeight: 80, width: 'auto', height: 'auto', objectFit: 'contain' }} />
+                </div>
               ) : (
                 <Avatar size={80} className="bg-blue-100 text-blue-600 mb-4" icon={<User size={40} />} />
               )}
