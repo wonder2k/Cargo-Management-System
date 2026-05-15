@@ -163,16 +163,22 @@ export const PDFService = {
   },
 
   // HTML-based printable quote — handles Chinese text natively via browser
-  printQuote: (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
+  printQuote: async (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
     const isZH = lang === 'zh';
 
-    // Logo — use absolute URL for popup window
+    // Try to load logo as data URL (reliable in popup regardless of origin)
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const rawAvatar = (profile as any)?.avatarUrl || '';
     const absLogo = rawAvatar.startsWith('/') ? origin + rawAvatar : rawAvatar;
-    const logoHtml = absLogo
-      ? `<img src="${absLogo}" style="max-height:48px;max-width:160px;object-fit:contain;" />`
-      : '';
+    let logoHtml = '';
+    if (absLogo) {
+      try {
+        const resp = await fetch(absLogo);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise<string>((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.readAsDataURL(blob); });
+        logoHtml = `<img src="${dataUrl}" style="max-height:48px;max-width:160px;object-fit:contain;" />`;
+      } catch { logoHtml = ''; }
+    }
 
     const fx = (v: any) => (Number(v) || 0).toFixed(2);
 
@@ -357,24 +363,27 @@ export const PDFService = {
 
 </body></html>`;
 
-    // Popup window print — sets <base> for URL resolution, <title> for filename
+    // Popup window print — <title> determines PDF filename
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(html);
     win.document.close();
     win.document.title = `${quotation.quotationNo}_${(quotation.customerName || 'quote').replace(/[^a-zA-Z0-9]/g, '_')}`;
-    // Wait for images to load before printing
+
+    // Print once — guard against double-trigger from onload + timeout
+    let printed = false;
+    const triggerPrint = () => { if (!printed) { printed = true; win.print(); } };
+
     const imgs = win.document.querySelectorAll('img');
-    let loaded = 0;
     if (imgs.length === 0) {
-      setTimeout(() => win.print(), 500);
+      setTimeout(triggerPrint, 600);
     } else {
+      let loaded = 0;
       imgs.forEach((img: HTMLImageElement) => {
-        if (img.complete) { loaded++; if (loaded === imgs.length) win.print(); }
-        else { img.onload = () => { loaded++; if (loaded === imgs.length) win.print(); }; img.onerror = () => { loaded++; if (loaded === imgs.length) win.print(); }; }
+        if (img.complete) { loaded++; if (loaded === imgs.length) triggerPrint(); }
+        else { img.onload = () => { loaded++; if (loaded === imgs.length) triggerPrint(); }; img.onerror = () => { loaded++; if (loaded === imgs.length) triggerPrint(); }; }
       });
-      // Fallback: print after 2s even if images haven't loaded
-      setTimeout(() => win.print(), 2000);
+      setTimeout(triggerPrint, 3000); // safety timeout
     }
   },
 
