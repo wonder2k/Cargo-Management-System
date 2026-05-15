@@ -313,10 +313,16 @@ export const PricingList: React.FC = () => {
                   const miscPerKgAmount = (r.miscFees || []).reduce((sum, item) =>
                     item.unit === 'per_kg' ? sum + item.amount : sum, 0);
                   const tieredBase = getTierAdjustedBase(r);
+                  const adjustedBase = adjustmentType === 'manual'
+                    ? (customPrices[r.id] || tieredBase)
+                    : (adjustmentType === 'percent' ? tieredBase * (1 + adjustmentValue / 100) : tieredBase + adjustmentValue);
+                  const adjDiff = adjustedBase - tieredBase;
 
                   const breakdown = (
                     <div className="text-xs space-y-1" style={{ minWidth: 200 }}>
                       <div className="flex justify-between gap-4"><span>Base:</span><span className="font-mono">{tieredBase.toFixed(2)}</span></div>
+                      {adjDiff !== 0 && <div className="flex justify-between gap-4 text-orange-600"><span>Adjust ({adjustmentType}):</span><span className="font-mono">{adjDiff > 0 ? '+' : ''}{adjDiff.toFixed(2)}</span></div>}
+                      <div className="flex justify-between gap-4 font-bold text-blue-700 border-b pb-1 mb-1"><span>Adj. Base:</span><span className="font-mono">{adjustedBase.toFixed(2)}</span></div>
                       {r.fuelSurcharge > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Fuel:</span><span className="font-mono">+{r.fuelSurcharge.toFixed(2)}</span></div>}
                       {r.securityScreening > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Security:</span><span className="font-mono">+{r.securityScreening.toFixed(2)}</span></div>}
                       {r.terminalHandling > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Terminal:</span><span className="font-mono">+{r.terminalHandling.toFixed(2)}</span></div>}
@@ -333,6 +339,7 @@ export const PricingList: React.FC = () => {
                       {(r.miscFees || []).filter((m: any) => m.unit === 'per_shipment').map((m: any, i: number) => (
                         <div key={i} className="flex justify-between gap-4"><span>{m.name}:</span><span className="font-mono">{r.currency} {Number(m.amount).toFixed(2)}</span></div>
                       ))}
+                      <div className="border-t pt-1 flex justify-between font-bold text-amber-700"><span>Total Flat:</span><span className="font-mono">{r.currency} {flatFees.toFixed(2)}</span></div>
                     </div>
                   ) : null;
 

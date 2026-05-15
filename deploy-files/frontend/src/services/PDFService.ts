@@ -203,6 +203,14 @@ export const PDFService = {
       if (secVal > 0) left.push(row(isZH ? '安检费' : 'Security', secVal));
       if (termVal > 0) left.push(row(isZH ? '地勤费' : 'Terminal', termVal));
       if (miskKgSum > 0) left.push(row(isZH ? '杂费(KG)' : 'Misc(KG)', miskKgSum));
+      // Per-shipment misc fees (MAWB, Info, etc.)
+      const shipItems = (r.miscFees || []).filter((m: any) => m.unit === 'per_shipment');
+      if (shipItems.length > 0) {
+        left.push(`<div style="border-top:1px dashed #d1d5db;margin:2px 0;font-size:8px;color:#9ca3af;padding-top:1px">${isZH ? '按票费用' : 'Per-Shipment'}</div>`);
+        shipItems.forEach((m: any) => {
+          left.push(row(m.name, Number(m.amount) || 0));
+        });
+      }
 
       const cMap = r.customsMethods || {};
       const right: string[] = [ `<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">${isZH ? '报关费(按需选一)' : 'Customs (select one)'}</div>` ];
