@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { mawbs, bookings, accountsReceivable, accountsPayable } from '../db/schema';
+import { mawbs, bookings, rates, accountsReceivable, accountsPayable } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
@@ -171,11 +171,45 @@ router.post('/mawbs/:id/close', authenticateToken, async (req, res) => {
     const fuelSurcharge = Number(booking.fuelSurcharge || 0);
     const securityScreening = Number(booking.securityScreening || 0);
     const terminalHandling = Number(booking.terminalHandling || 0);
-    const arAmount = (unitPrice + fuelSurcharge + securityScreening + terminalHandling) * cw;
+
+    // Lookup rate for customs methods + misc fees
+    let customsFee = { amount: 0, unit: 'per_shipment' as string };
+    let miscFees: any[] = [];
+    if (booking.rateId) {
+      const [rate] = await db.select().from(rates).where(eq(rates.id, booking.rateId)) as any;
+      if (rate) {
+        const decMethod = booking.declarationMethod || 'formal';
+        customsFee = rate.customsMethods?.[decMethod] || { amount: 0, unit: 'per_shipment' };
+        miscFees = rate.miscFees || [];
+      }
+    }
+
+    // Per-KG charges
+    const perKgAmount = (unitPrice + fuelSurcharge + securityScreening + terminalHandling) * cw;
+    // Customs fee (per-KG or per-shipment)
+    const customsAmount = customsFee.unit === 'per_kg' ? (customsFee.amount || 0) * cw : (customsFee.amount || 0);
+    // Misc fees (per-KG or per-shipment)
+    const miscAmount = miscFees.reduce((sum, m) => {
+      return sum + (m.unit === 'per_kg' ? (Number(m.amount) || 0) * cw : Number(m.amount) || 0);
+    }, 0);
+    const arAmount = perKgAmount + customsAmount + miscAmount;
 
     // Calculate AP (payable to carrier/vendor)
     const costPrice = Number(booking.costPrice || unitPrice * 0.85);
-    const apAmount = (costPrice + fuelSurcharge + securityScreening + terminalHandling) * cw;
+    const apPerKgAmount = (costPrice + fuelSurcharge + securityScreening + terminalHandling) * cw;
+    const apAmount = apPerKgAmount + customsAmount + miscAmount;
+
+    // Build line items
+    const arLineItems: any[] = [
+      { name: 'Air Freight', quantity: cw, unitPrice, amount: unitPrice * cw, unit: 'per_kg' as const },
+    ];
+    if (fuelSurcharge > 0) arLineItems.push({ name: 'Fuel Surcharge', quantity: cw, unitPrice: fuelSurcharge, amount: fuelSurcharge * cw, unit: 'per_kg' as const });
+    if (securityScreening > 0) arLineItems.push({ name: 'Security Screening', quantity: cw, unitPrice: securityScreening, amount: securityScreening * cw, unit: 'per_kg' as const });
+    if (terminalHandling > 0) arLineItems.push({ name: 'Terminal Handling', quantity: cw, unitPrice: terminalHandling, amount: terminalHandling * cw, unit: 'per_kg' as const });
+    if (customsFee.amount > 0) arLineItems.push({ name: `Customs (${(booking.declarationMethod || 'formal').toUpperCase()})`, quantity: customsFee.unit === 'per_kg' ? cw : 1, unitPrice: customsFee.amount, amount: customsAmount, unit: customsFee.unit });
+    miscFees.forEach(m => {
+      arLineItems.push({ name: m.name, quantity: m.unit === 'per_kg' ? cw : 1, unitPrice: m.amount, amount: m.unit === 'per_kg' ? m.amount * cw : m.amount, unit: m.unit });
+    });
 
     // Create AR entry
     await db.insert(accountsReceivable).values({
@@ -184,28 +218,25 @@ router.post('/mawbs/:id/close', authenticateToken, async (req, res) => {
       totalAmount: arAmount,
       currency: booking.currency || 'CNY',
       status: 'unpaid',
-      lineItems: [
-        { name: 'Air Freight', quantity: cw, unitPrice, amount: unitPrice * cw },
-        { name: 'Fuel Surcharge', quantity: cw, unitPrice: fuelSurcharge, amount: fuelSurcharge * cw },
-        { name: 'Security Screening', quantity: cw, unitPrice: securityScreening, amount: securityScreening * cw },
-        { name: 'Terminal Handling', quantity: cw, unitPrice: terminalHandling, amount: terminalHandling * cw },
-      ],
+      lineItems: arLineItems,
       createdAt: new Date(),
     });
 
     // Create AP entry
+    const apLineItems: any[] = [
+      { name: 'Air Freight (Cost)', quantity: cw, unitPrice: costPrice, amount: costPrice * cw, unit: 'per_kg' as const },
+    ];
+    if (fuelSurcharge > 0) apLineItems.push({ name: 'Fuel Surcharge', quantity: cw, unitPrice: fuelSurcharge, amount: fuelSurcharge * cw, unit: 'per_kg' as const });
+    if (securityScreening > 0) apLineItems.push({ name: 'Security Screening', quantity: cw, unitPrice: securityScreening, amount: securityScreening * cw, unit: 'per_kg' as const });
+    if (terminalHandling > 0) apLineItems.push({ name: 'Terminal Handling', quantity: cw, unitPrice: terminalHandling, amount: terminalHandling * cw, unit: 'per_kg' as const });
+
     await db.insert(accountsPayable).values({
       mawbId: mawb.id,
       vendorName: mawb.carrier || 'Carrier',
       totalAmount: apAmount,
       currency: booking.currency || 'CNY',
       status: 'pending',
-      lineItems: [
-        { name: 'Air Freight (Cost)', quantity: cw, unitPrice: costPrice, amount: costPrice * cw },
-        { name: 'Fuel Surcharge', quantity: cw, unitPrice: fuelSurcharge, amount: fuelSurcharge * cw },
-        { name: 'Security Screening', quantity: cw, unitPrice: securityScreening, amount: securityScreening * cw },
-        { name: 'Terminal Handling', quantity: cw, unitPrice: terminalHandling, amount: terminalHandling * cw },
-      ],
+      lineItems: apLineItems,
       createdAt: new Date(),
     });
 

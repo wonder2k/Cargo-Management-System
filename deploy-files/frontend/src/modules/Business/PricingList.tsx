@@ -396,10 +396,10 @@ export const PricingList: React.FC = () => {
              <Col span={6}><Form.Item name="currency" label="Currency" initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
-             <Col span={6}><Form.Item name="baseFreight" label="Base Price" rules={[{ required: true }]}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={6}><Form.Item name="fuelSurcharge" label="Fuel" initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={6}><Form.Item name="securityScreening" label="Security" initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
-             <Col span={6}><Form.Item name="terminalHandling" label="Terminal" initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
+             <Col span={6}><Form.Item name="baseFreight" label="Base Price (/KG)" rules={[{ required: true }]}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="fuelSurcharge" label="Fuel (/KG)" initialValue={0}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="securityScreening" label="Security (/KG)" initialValue={0}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="terminalHandling" label="Terminal (/KG)" initialValue={0}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
           </Row>
 
           <Title level={5} className="mb-2 mt-6 text-slate-700">{t('pricing.customs')}</Title>
