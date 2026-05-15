@@ -143,7 +143,7 @@ export const PricingList: React.FC = () => {
     const selectedRates = rates.filter(r => selectedRateIds.includes(r.id));
     if (selectedRates.length === 0) return;
 
-    let customer;
+    let customer: Customer | undefined;
     let customerName = 'Walk-in Client';
     let recipientInfo = values.recipientInfo || '';
 
@@ -151,7 +151,7 @@ export const PricingList: React.FC = () => {
         customerName = values.manualCustomerName || 'Walk-in Client';
         recipientInfo = values.manualRecipientInfo || '';
     } else {
-        customer = customers.find(c => String(c.id) === String(values.customerId));
+        customer = customers.find((c: Customer) => String(c.id) === String(values.customerId));
         customerName = customer?.name || 'Walk-in Client';
         recipientInfo = values.recipientInfo || '';
     }

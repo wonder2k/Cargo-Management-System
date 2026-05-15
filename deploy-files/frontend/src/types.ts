@@ -119,6 +119,7 @@ export interface MAWB {
   destination: string;
   carrier?: string;
   flightNo?: string;
+  flightDate?: string;
   atd?: string;
   ata?: string;
   pod_time?: string;
@@ -134,6 +135,8 @@ export interface MAWB {
   trackingLogs?: any[];
   warehouse?: string;
   warehouseEntryTime?: string;
+  draftFileUrl?: string;
+  draftFileName?: string;
 }
 
 export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'unpaid';
@@ -162,7 +165,8 @@ export type BookingStatus =
   | 'finalized' 
   | 'warehouse_in'
   | 'on_hold'
-  | 'cancelled';
+  | 'cancelled'
+  | 'closed';
 
 export type ExportDeclarationMethod = 'formal' | '9610' | '9710' | '9810';
 
@@ -193,6 +197,8 @@ export interface Booking {
   mawbNo?: string;
   warehouseId?: string;
   entryTime?: string;
+  manifestFileUrl?: string;
+  manifestFileName?: string;
   status: BookingStatus;
   createdAt: string;
   createdBy: string | number;
