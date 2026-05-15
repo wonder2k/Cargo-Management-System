@@ -111,9 +111,12 @@ export const MainLayout: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 12px',
+          fontSize: collapsed ? 16 : 20,
+          fontWeight: 700,
+          color: '#fff',
+          letterSpacing: '0.02em',
         }}>
-          <img src="/logo.png" alt="JCargo" style={{ height: collapsed ? 32 : 40, width: '100%', maxWidth: collapsed ? 32 : 200, objectFit: 'contain' }} />
+          {collapsed ? 'JC' : 'JCargo CMS'}
         </div>
         <Menu
           theme="dark"
@@ -144,9 +147,10 @@ export const MainLayout: React.FC = () => {
           />
           
           <Space size="large">
-            <Button 
-              type="text" 
-              icon={<Globe size={18} />} 
+            <img src="/logo.png" alt="JCargo" style={{ height: 28, width: 'auto' }} />
+            <Button
+              type="text"
+              icon={<Globe size={18} />}
               onClick={toggleLanguage}
             >
               {i18n.language?.startsWith('zh') ? 'English' : '中文'}
