@@ -7,11 +7,13 @@ import { PricingList } from './PricingList';
 import { BookingList } from './BookingList';
 import { QuotationHistory } from './QuotationHistory';
 import { CustomerList } from './CustomerList';
+import { businessApi } from '../../services/api';
 
 const { Title, Text } = Typography;
 
 export const BusinessModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('rates');
+  const [stats, setStats] = useState({ totalRevenue: 0, activeQuotes: 0, confirmedBookings: 0, crmClients: 0 });
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -23,6 +25,10 @@ export const BusinessModule: React.FC = () => {
     else if (location.pathname.includes('/customers')) setActiveTab('crm');
     else if (location.pathname.includes('/business')) setActiveTab('rates');
   }, [location]);
+
+  useEffect(() => {
+    businessApi.getModuleStats().then(r => setStats(r.data)).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -36,22 +42,22 @@ export const BusinessModule: React.FC = () => {
       <Row gutter={20}>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-blue-50">
-            <Statistic title={t('business.totalRevenue', 'Total Revenue')} value={245000} prefix={<TrendingUp size={18} className="mr-2 text-blue-600" />} />
+            <Statistic title={t('business.totalRevenue', 'Total Revenue')} value={stats.totalRevenue} prefix={<TrendingUp size={18} className="mr-2 text-blue-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-green-50">
-            <Statistic title={t('business.activeQuotes', 'Active Quotes')} value={18} prefix={<Globe size={18} className="mr-2 text-green-600" />} />
+            <Statistic title={t('business.activeQuotes', 'Active Quotes')} value={stats.activeQuotes} prefix={<Globe size={18} className="mr-2 text-green-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-purple-50">
-            <Statistic title={t('business.confirmedBookings', 'Confirmed Bookings')} value={12} prefix={<Briefcase size={18} className="mr-2 text-purple-600" />} />
+            <Statistic title={t('business.confirmedBookings', 'Confirmed Bookings')} value={stats.confirmedBookings} prefix={<Briefcase size={18} className="mr-2 text-purple-600" />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card className="shadow-sm border-none bg-indigo-50">
-            <Statistic title={t('business.crmClients', 'CRM Clients')} value={45} prefix={<Users size={18} className="mr-2 text-indigo-600" />} />
+            <Statistic title={t('business.crmClients', 'CRM Clients')} value={stats.crmClients} prefix={<Users size={18} className="mr-2 text-indigo-600" />} />
           </Card>
         </Col>
       </Row>
@@ -109,4 +115,3 @@ export const BusinessModule: React.FC = () => {
     </div>
   );
 };
-

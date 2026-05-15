@@ -102,4 +102,25 @@ router.put('/invoices/:id', authenticateToken, authorizeRole(['admin', 'finance'
   }
 });
 
+// GET finance module summary stats (real data from DB)
+router.get('/stats', authenticateToken, authorizeRole(['admin', 'finance']), async (_req, res) => {
+  try {
+    const [allAR, allAP] = await Promise.all([
+      db.select().from(accountsReceivable),
+      db.select().from(accountsPayable),
+    ]);
+
+    const totalAR = allAR.reduce((sum, ar) => sum + Number(ar.totalAmount || 0), 0);
+    const totalAP = allAP.reduce((sum, ap) => sum + Number(ap.totalAmount || 0), 0);
+
+    res.json({
+      totalAR,
+      totalAP,
+      netProfit: totalAR - totalAP,
+    });
+  } catch {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 export default router;

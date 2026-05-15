@@ -85,4 +85,21 @@ router.get('/tracking/:mawbNo', authenticateToken, async (req, res) => {
   }
 });
 
+// GET operation module stats (real data from DB)
+router.get('/stats', authenticateToken, async (_req, res) => {
+  try {
+    const allMawbs = await db.select().from(mawbs);
+    const activeFlights = allMawbs.filter(m =>
+      ['pending', 'booked', 'confirmed', 'warehouse_in', 'customs', 'terminal_in', 'departed'].includes(m.status || '')
+    ).length;
+    const inCustoms = allMawbs.filter(m => m.status === 'customs').length;
+    const inWarehouse = allMawbs.filter(m => m.status === 'warehouse_in').length;
+    const bookedPending = allMawbs.filter(m => m.status === 'booked').length;
+
+    res.json({ activeFlights, inCustoms, inWarehouse, bookedPending });
+  } catch {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 export default router;

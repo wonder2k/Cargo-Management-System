@@ -1,28 +1,48 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { customers, bookings, rates, quotes } from '../db/schema';
+import { customers, bookings, rates, quotes, mawbs, accountsReceivable, accountsPayable } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// ====== Dashboard Stats ======
+// ====== Dashboard Stats (real data from DB) ======
 router.get('/dashboard-stats', authenticateToken, async (_req, res) => {
   try {
-    const allBookings = await db.select().from(bookings);
+    const [allBookings, allMawbs, allAR] = await Promise.all([
+      db.select().from(bookings),
+      db.select().from(mawbs),
+      db.select().from(accountsReceivable),
+    ]);
+
+    const totalShipments = allBookings.length;
+    const pendingBookings = allBookings.filter(b => b.status === 'pending').length;
+    const activeOperations = allMawbs.filter(m =>
+      ['pending', 'booked', 'confirmed', 'warehouse_in', 'customs', 'terminal_in', 'departed'].includes(m.status || '')
+    ).length;
+    const monthlyRevenue = allAR.reduce((sum, ar) => sum + Number(ar.totalAmount || 0), 0);
+
+    const recentMawbs = allMawbs
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5)
+      .map((m, i) => ({
+        key: String(i + 1),
+        no: m.mawbNo,
+        flow: `${m.origin || '?'} - ${m.destination || '?'}`,
+        status: m.status || 'pending',
+        date: m.createdAt ? new Date(m.createdAt).toISOString().split('T')[0] : '-',
+      }));
+
     res.json({
       stats: {
-        totalShipments: allBookings.length || 1254,
-        pendingBookings: allBookings.filter(b => b.status === 'pending').length || 24,
-        activeOperations: 45,
-        monthlyRevenue: 854300,
+        totalShipments,
+        pendingBookings,
+        activeOperations,
+        monthlyRevenue,
         revenueGrowth: 12.5,
-        shipmentGrowth: 8.2
+        shipmentGrowth: 8.2,
       },
-      recentOperations: [
-        { key: '1', no: 'MAWB-2025001', flow: 'PVG - FRA', status: 'In Transit', date: '2025-05-01' },
-        { key: '2', no: 'MAWB-2025002', flow: 'HKG - LAX', status: 'Completed', date: '2025-05-01' },
-      ]
+      recentOperations: recentMawbs,
     });
   } catch (error) {
     res.status(500).json({ message: 'Internal Server Error' });
@@ -198,6 +218,31 @@ router.delete('/bookings/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'Booking deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete booking' });
+  }
+});
+
+// ====== Business Module Stats (real data) ======
+router.get('/module-stats', authenticateToken, async (_req, res) => {
+  try {
+    const [allQuotes, allBookings, allCustomers] = await Promise.all([
+      db.select().from(quotes),
+      db.select().from(bookings),
+      db.select().from(customers),
+    ]);
+
+    const monthlyRevenue = allBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+    const activeQuotes = allQuotes.filter(q => q.status === 'sent').length;
+    const confirmedBookings = allBookings.filter(b => !['pending', 'cancelled'].includes(b.status || '')).length;
+    const crmClients = allCustomers.length;
+
+    res.json({
+      totalRevenue: monthlyRevenue,
+      activeQuotes,
+      confirmedBookings,
+      crmClients,
+    });
+  } catch {
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 

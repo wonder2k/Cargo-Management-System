@@ -31,6 +31,7 @@ export const authApi = {
 // ====== Business API ======
 export const businessApi = {
   getStats: () => api.get('/business/dashboard-stats'),
+  getModuleStats: () => api.get('/business/module-stats'),
 
   // Customers
   getCustomers: () => api.get('/business/customers'),
@@ -62,6 +63,7 @@ export const operationApi = {
   createMawb: (data: any) => api.post('/operation/mawbs', data),
   updateMawb: (id: string | number, data: any) => api.post(`/operation/mawbs/${id}/status`, data),
   getTracking: (mawbNo: string) => api.get(`/operation/tracking/${mawbNo}`),
+  getStats: () => api.get('/operation/stats'),
 };
 
 // ====== Finance API ======
@@ -80,6 +82,9 @@ export const financeApi = {
   getAP: () => api.get('/finance/ap'),
   createAP: (data: any) => api.post('/finance/ap', data),
   updateAP: (id: string | number, data: any) => api.put(`/finance/ap/${id}`, data),
+
+  // Stats
+  getStats: () => api.get('/finance/stats'),
 };
 
 export default api;
