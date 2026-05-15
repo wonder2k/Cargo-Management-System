@@ -132,7 +132,7 @@ export const BookingList: React.FC = () => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('common.bookings')}</Title>
-          <Text type="secondary">Manage your air cargo bookings</Text>
+          <Text type="secondary">{t('bookings.subtitle')}</Text>
         </div>
         <Button 
           type="primary" 

@@ -40,7 +40,7 @@ export const QuotationHistory: React.FC = () => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('quotes.title')}</Title>
-          <Text type="secondary">Audit trail of generated air freight quotes</Text>
+          <Text type="secondary">{t('quotes.subtitle')}</Text>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export const QuotationHistory: React.FC = () => {
         <div className="mb-4">
           <Input 
             prefix={<Search size={16} className="text-slate-400" />} 
-            placeholder="Search quote no, customer or user..." 
+            placeholder={t('common.searchQuote')}
             className="w-96"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}

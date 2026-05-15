@@ -32,6 +32,8 @@ const resources = {
         phone: "Phone",
         submit: "Submit",
         search: "Search",
+        searchMawb: "Search MAWB...",
+        searchQuote: "Search quote no, customer or user...",
         add: "Add",
         edit: "Edit",
         delete: "Delete",
@@ -52,6 +54,12 @@ const resources = {
         code: "Code",
         name: "Name",
         type: "Type",
+        customer: "Customer",
+        amount: "Amount",
+        vendor: "Vendor",
+        mawb: "MAWB",
+        mawbId: "MAWB ID",
+        markPaid: "Mark Paid",
         manageClients: "Manage your business clients",
         updated: "Updated successfully",
         added: "Added successfully",
@@ -98,6 +106,7 @@ const resources = {
       },
       pricing: {
         title: "Price Cabinet",
+        subtitle: "Query air freight rates and generate quotes",
         addRate: "Add Flight Rate",
         flightNo: "Flight No",
         aircraft: "Aircraft",
@@ -115,6 +124,7 @@ const resources = {
       },
       quotes: {
         title: "Quotation History",
+        subtitle: "Audit trail of generated air freight quotes",
         quoteNo: "Quote No",
         client: "Client",
         amount: "Amount",
@@ -123,6 +133,7 @@ const resources = {
       },
       bookings: {
         title: "Booking Management",
+        subtitle: "Manage your air cargo bookings",
         create: "Create Booking",
         bookingNo: "Booking No",
         flightDate: "Flight Date",
@@ -153,12 +164,20 @@ const resources = {
       finance: {
         title: "Financial Settlement",
         subtitle: "Accounts Receivable, Payable and Net Profit tracking",
+        invoiceSubtitle: "Financial management and reporting",
         ar: "Account Receivable",
         ap: "Account Payable",
         invoiceNo: "Invoice No",
         dueDate: "Due Date",
         outstanding: "Outstanding",
-        profit: "Profit Analysis"
+        profit: "Profit Analysis",
+        activeInvoices: "Active Invoices",
+        pendingReceivables: "Pending Receivables",
+        pendingPayables: "Pending Payables",
+        totalAR: "Total AR",
+        totalAP: "Total AP",
+        netProfit: "Net Profit",
+        createInvoice: "Create Manual Invoice"
       },
       booking: {
         status: {
@@ -209,6 +228,8 @@ const resources = {
         phone: "电话",
         submit: "提交",
         search: "搜索",
+        searchMawb: "搜索主单号...",
+        searchQuote: "搜索报价号、客户或用户...",
         add: "新增",
         edit: "编辑",
         delete: "删除",
@@ -229,6 +250,12 @@ const resources = {
         code: "客户代码",
         name: "客户名称",
         type: "客户类型",
+        customer: "客户",
+        amount: "金额",
+        vendor: "供应商",
+        mawb: "主单",
+        mawbId: "主单编号",
+        markPaid: "标记已付",
         manageClients: "管理您的业务客户",
         updated: "更新成功",
         added: "新增成功",
@@ -275,6 +302,7 @@ const resources = {
       },
       pricing: {
         title: "运价板",
+        subtitle: "查询空运运价并生成报价",
         addRate: "新增运价",
         flightNo: "航班号",
         aircraft: "机型",
@@ -292,6 +320,7 @@ const resources = {
       },
       quotes: {
         title: "报价单记录",
+        subtitle: "报价生成审计追踪",
         quoteNo: "报价单号",
         client: "客户",
         amount: "金额",
@@ -300,6 +329,7 @@ const resources = {
       },
       bookings: {
         title: "订舱列表",
+        subtitle: "管理您的空运订舱",
         create: "创建订舱",
         bookingNo: "订舱号",
         flightDate: "航班日期",
@@ -330,12 +360,20 @@ const resources = {
       finance: {
         title: "结算中心",
         subtitle: "追踪应收、应付账目及净利润表现",
+        invoiceSubtitle: "财务管理与报表",
         ar: "应收管理",
         ap: "应付管理",
         invoiceNo: "账单号",
         dueDate: "到期日期",
         outstanding: "未结金额",
-        profit: "利润分析"
+        profit: "利润分析",
+        activeInvoices: "有效发票",
+        pendingReceivables: "待收款",
+        pendingPayables: "待付款",
+        totalAR: "应收合计",
+        totalAP: "应付合计",
+        netProfit: "净利润",
+        createInvoice: "创建发票"
       },
       booking: {
         status: {

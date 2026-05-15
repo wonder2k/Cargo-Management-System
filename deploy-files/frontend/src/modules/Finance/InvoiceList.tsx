@@ -94,27 +94,27 @@ export const InvoiceList: React.FC = () => {
       label: <span className="flex items-center gap-2"><TrendingUp size={16} />AR</span>,
       children: (
         <div className="space-y-6">
-          <Card title="Active Invoices" extra={<Button type="primary" size="small" onClick={() => setModalOpen(true)}>{t('common.add')}</Button>}>
+          <Card title={t('finance.activeInvoices')} extra={<Button type="primary" size="small" onClick={() => setModalOpen(true)}>{t('common.add')}</Button>}>
              <Table 
                 dataSource={invoices}
                 loading={loading}
                 rowKey="id"
                 columns={[
-                  { title: 'Invoice No', dataIndex: 'invoiceNo', render: (v) => <span className="font-mono font-bold text-blue-600">{v}</span> },
-                  { title: 'Customer', dataIndex: 'customerId', render: (id) => customers.find(c => c.id === id)?.name || id },
-                  { title: 'Amount', render: (_, r) => `${r.currency} ${r.amount}` },
-                  { title: 'Status', dataIndex: 'status', render: (s) => <Tag color={s === 'paid' ? 'success' : 'processing'}>{s}</Tag> },
-                  { title: 'Actions', render: (_, r) => r.status !== 'paid' && <Button size="small" type="link" onClick={async () => {
+                  { title: t('finance.invoiceNo'), dataIndex: 'invoiceNo', render: (v) => <span className="font-mono font-bold text-blue-600">{v}</span> },
+                  { title: t('common.customer'), dataIndex: 'customerId', render: (id) => customers.find(c => c.id === id)?.name || id },
+                  { title: t('common.amount'), render: (_, r) => `${r.currency} ${r.amount}` },
+                  { title: t('common.status'), dataIndex: 'status', render: (s) => <Tag color={s === 'paid' ? 'success' : 'processing'}>{s}</Tag> },
+                  { title: t('common.actions'), render: (_, r) => r.status !== 'paid' && <Button size="small" type="link" onClick={async () => {
                       await financeApi.updateInvoice(r.id, { status: 'paid' });
                       fetchData();
-                  }}>Mark Paid</Button> }
+                  }}>{t('common.markPaid')}</Button> }
                 ]}
              />
           </Card>
 
           <Card 
-            title="Pending Receivables" 
-            extra={<Button type="primary" disabled={selectedARRows.length === 0} onClick={handleConsolidateAR}>Generate Invoice ({selectedARRows.length})</Button>}
+            title={t('finance.pendingReceivables')} 
+            extra={<Button type="primary" disabled={selectedARRows.length === 0} onClick={handleConsolidateAR}>{t('finance.createInvoice')} ({selectedARRows.length})</Button>}
           >
             <Table
               rowSelection={{
@@ -125,10 +125,10 @@ export const InvoiceList: React.FC = () => {
               dataSource={accountsReceivable.filter(ar => ar.status !== 'invoiced')}
               rowKey="id"
               columns={[
-                { title: 'MAWB ID', dataIndex: 'mawbId', render: (v: any) => <span className="font-mono">{v || '--'}</span> },
-                { title: 'Customer', dataIndex: 'customerId', render: (id) => customers.find(c => c.id === id)?.name || id },
-                { title: 'Amount', render: (_, r) => <Text strong>{r.currency} {r.totalAmount}</Text> },
-                { title: 'Date', dataIndex: 'createdAt', render: (v) => dayjs(v).format('YYYY-MM-DD') }
+                { title: t('common.mawbId'), dataIndex: 'mawbId', render: (v: any) => <span className="font-mono">{v || '--'}</span> },
+                { title: t('common.customer'), dataIndex: 'customerId', render: (id) => customers.find(c => c.id === id)?.name || id },
+                { title: t('common.amount'), render: (_, r) => <Text strong>{r.currency} {r.totalAmount}</Text> },
+                { title: t('common.date'), dataIndex: 'createdAt', render: (v) => dayjs(v).format('YYYY-MM-DD') }
               ]}
             />
           </Card>
@@ -139,19 +139,19 @@ export const InvoiceList: React.FC = () => {
       key: 'ap',
       label: <span className="flex items-center gap-2"><TrendingDown size={16} />AP</span>,
       children: (
-        <Card title="Pending Payables">
+        <Card title={t('finance.pendingPayables')}>
            <Table 
               dataSource={accountsPayable}
               rowKey="id"
               columns={[
-                { title: 'MAWB', dataIndex: 'mawbId', render: (id) => mawbs.find(m => m.id === id)?.mawbNo || id },
-                { title: 'Vendor', dataIndex: 'vendorName' },
-                { title: 'Amount', render: (_, r) => <Text strong className="text-red-500">{r.currency} {r.totalAmount}</Text> },
-                { title: 'Status', dataIndex: 'status', render: (s) => <Tag color={s === 'paid' ? 'success' : 'warning'}>{s}</Tag> },
-                { title: 'Actions', render: (_, r) => r.status !== 'paid' && <Button size="small" type="link" onClick={async () => {
+                { title: t('common.mawb'), dataIndex: 'mawbId', render: (id) => mawbs.find(m => m.id === id)?.mawbNo || id },
+                { title: t('common.vendor'), dataIndex: 'vendorName' },
+                { title: t('common.amount'), render: (_, r) => <Text strong className="text-red-500">{r.currency} {r.totalAmount}</Text> },
+                { title: t('common.status'), dataIndex: 'status', render: (s) => <Tag color={s === 'paid' ? 'success' : 'warning'}>{s}</Tag> },
+                { title: t('common.actions'), render: (_, r) => r.status !== 'paid' && <Button size="small" type="link" onClick={async () => {
                    await financeApi.updateAP(r.id, { status: 'paid' });
                    fetchData();
-                }}>Mark Paid</Button> }
+                }}>{t('common.markPaid')}</Button> }
               ]}
            />
         </Card>
@@ -162,9 +162,9 @@ export const InvoiceList: React.FC = () => {
       label: <span className="flex items-center gap-2"><BarChart3 size={16} />Analysis</span>,
       children: (
         <div className="grid grid-cols-3 gap-4">
-           <Card><Statistic title="Total AR" value={accountsReceivable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<TrendingUp className="text-green-500" />} /></Card>
-           <Card><Statistic title="Total AP" value={accountsPayable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<TrendingDown className="text-red-500" />} /></Card>
-           <Card><Statistic title="Net Profit" value={accountsReceivable.reduce((s, i) => s + Number(i.totalAmount), 0) - accountsPayable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<DollarSign className="text-blue-500" />} /></Card>
+           <Card><Statistic title={t('finance.totalAR')} value={accountsReceivable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<TrendingUp className="text-green-500" />} /></Card>
+           <Card><Statistic title={t('finance.totalAP')} value={accountsPayable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<TrendingDown className="text-red-500" />} /></Card>
+           <Card><Statistic title={t('finance.netProfit')} value={accountsReceivable.reduce((s, i) => s + Number(i.totalAmount), 0) - accountsPayable.reduce((s, i) => s + Number(i.totalAmount), 0)} prefix={<DollarSign className="text-blue-500" />} /></Card>
         </div>
       )
     }
@@ -174,7 +174,7 @@ export const InvoiceList: React.FC = () => {
     <div className="p-6">
       <div className="mb-6">
         <Title level={2}>{t('finance.title')}</Title>
-        <Paragraph type="secondary">Financial management and reporting</Paragraph>
+        <Paragraph type="secondary">{t('finance.invoiceSubtitle')}</Paragraph>
       </div>
 
       <Tabs 
@@ -184,7 +184,7 @@ export const InvoiceList: React.FC = () => {
         className="bg-white p-4 rounded-xl shadow-sm border border-slate-200"
       />
 
-      <Modal title="Create Manual Invoice" open={modalOpen} onCancel={() => setModalOpen(false)} onOk={() => form.submit()}>
+      <Modal title={t('finance.createInvoice')} open={modalOpen} onCancel={() => setModalOpen(false)} onOk={() => form.submit()}>
         <Form form={form} layout="vertical" onFinish={async (v) => {
             try {
               await financeApi.createInvoice(v);
@@ -193,7 +193,7 @@ export const InvoiceList: React.FC = () => {
               fetchData();
             } catch (e) { message.error('Failed'); }
         }}>
-           <Form.Item name="invoiceNo" label="Invoice No" rules={[{ required: true }]}><Input /></Form.Item>
+           <Form.Item name="invoiceNo" label={t('finance.invoiceNo')} rules={[{ required: true }]}><Input /></Form.Item>
            <Form.Item name="customerId" label="Customer" rules={[{ required: true }]}><Select options={customers.map(c => ({ label: c.name, value: c.id }))} /></Form.Item>
            <Form.Item name="amount" label="Amount" rules={[{ required: true }]}><InputNumber className="w-full" /></Form.Item>
            <Form.Item name="currency" label="Currency" initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item>

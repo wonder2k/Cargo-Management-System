@@ -73,11 +73,11 @@ export const MawbList: React.FC = () => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('operation.title')}</Title>
-          <Text type="secondary">Monitor and control air shipments</Text>
+          <Text type="secondary">{t('operation.subtitle')}</Text>
         </div>
         <Input 
           prefix={<Search size={16} className="text-slate-400" />}
-          placeholder="Search MAWB..."
+          placeholder={t('common.searchMawb')}
           className="w-64"
           onChange={(e) => setSearchText(e.target.value)}
         />

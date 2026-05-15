@@ -217,7 +217,7 @@ export const PricingList: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <Title level={2} className="mb-0">{t('pricing.title')}</Title>
-          <Text type="secondary">Query air freight rates and generate quotes</Text>
+          <Text type="secondary">{t('pricing.subtitle')}</Text>
         </div>
         <Space size="middle">
           {isAdmin && (
