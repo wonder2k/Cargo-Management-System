@@ -1,0 +1,49 @@
+#!/bin/bash
+# JCargo CMS — 数据库恢复
+# 用法: bash gitndbrestore backup/jcargo-db-20250101_120000.sql.gz
+set -e
+
+if [ $# -eq 0 ]; then
+  echo "用法: bash gitndbrestore <备份文件路径>"
+  echo "示例: bash gitndbrestore backup/jcargo-db-20260101_120000.sql.gz"
+  echo ""
+  echo "可用备份:"
+  ls -lh backup/jcargo-db-*.sql.gz 2>/dev/null || echo "  无备份文件"
+  exit 1
+fi
+
+BACKUP_FILE="$1"
+
+if [ ! -f "$BACKUP_FILE" ]; then
+  echo "❌ 备份文件不存在: $BACKUP_FILE"
+  exit 1
+fi
+
+echo "=========================================="
+echo " JCargo CMS — 数据恢复"
+echo " 文件: $BACKUP_FILE"
+echo "=========================================="
+echo ""
+
+echo "⚠️ ⚠️ ⚠️"
+echo " 此操作将覆盖当前数据库的所有数据!"
+echo " 确认继续? (输入 YES 确认)"
+read CONFIRM
+if [ "$CONFIRM" != "YES" ]; then
+  echo "已取消"
+  exit 0
+fi
+
+echo ""
+echo "🔄 恢复数据库..."
+cd deploy-files
+
+# 如果是 .gz 文件，先解压再恢复
+if [[ "$BACKUP_FILE" == *.gz ]]; then
+  gunzip -c "../${BACKUP_FILE}" | docker compose exec -T db psql -U jcargo_user jcargo_db 2>/dev/null
+else
+  cat "../${BACKUP_FILE}" | docker compose exec -T db psql -U jcargo_user jcargo_db 2>/dev/null
+fi
+
+echo ""
+echo "✅ 恢复完成"

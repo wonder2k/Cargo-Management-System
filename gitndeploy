@@ -1,10 +1,22 @@
 #!/bin/bash
-# JCargo CMS — Quick deploy (rebuild & restart)
+# JCargo CMS — Quick deploy (rebuild & restart without data loss)
+# Uses `docker compose down` (NO -v flag) — preserves all data volumes.
 set -e
+
+echo "=========================================="
+echo " JCargo CMS — 快速部署"
+echo " 注意: 数据卷不会被删除，数据库和上传文件完好"
+echo "=========================================="
+echo ""
+
 cd deploy-files
 docker compose down
 cd ..
 git pull origin main
 cd deploy-files
 docker compose up --build -d
+
 echo "✅ Deploy complete"
+echo ""
+echo "查看日志: docker compose logs -f backend"
+echo "数据库备份: bash ../gitndbbackup"

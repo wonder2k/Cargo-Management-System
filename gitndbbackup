@@ -1,0 +1,46 @@
+#!/bin/bash
+# JCargo CMS — 数据库备份
+# 备份 PostgreSQL 和上传文件到 backup/ 目录
+set -e
+
+BACKUP_DIR="backup"
+TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
+DB_BACKUP="${BACKUP_DIR}/jcargo-db-${TIMESTAMP}.sql"
+UPLOADS_BACKUP="${BACKUP_DIR}/jcargo-uploads-${TIMESTAMP}.tar.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+echo "=========================================="
+echo " JCargo CMS — 数据备份"
+echo " 时间: $(date '+%Y-%m-%d %H:%M:%S')"
+echo " 目录: ${BACKUP_DIR}/"
+echo "=========================================="
+echo ""
+
+# 1. 检查容器是否运行
+if ! docker compose ps db --format json 2>/dev/null | grep -q '"State":"running"'; then
+  echo "⚠️ 数据库容器未运行，跳过"
+else
+  echo "📦 备份数据库..."
+  cd deploy-files
+  docker compose exec -T db pg_dump -U "${POSTGRES_USER:-jcargo_user}" "${POSTGRES_DB:-jcargo_db}" > "../${DB_BACKUP}" 2>/dev/null
+  cd ..
+  gzip -f "$DB_BACKUP"
+  DB_BACKUP="${DB_BACKUP}.gz"
+  echo "   → ${DB_BACKUP} ($(ls -lh "$DB_BACKUP" | awk '{print $5}'))"
+fi
+
+# 2. 备份上传文件
+if [ -d "deploy-files/uploads" ] && [ "$(ls -A deploy-files/uploads 2>/dev/null)" ]; then
+  echo "📁 备份上传文件..."
+  tar czf "$UPLOADS_BACKUP" -C deploy-files/uploads .
+  echo "   → ${UPLOADS_BACKUP} ($(ls -lh "$UPLOADS_BACKUP" | awk '{print $5}'))"
+else
+  echo "📁 上传目录为空，跳过"
+fi
+
+echo ""
+echo "✅ 备份完成"
+echo ""
+echo "恢复数据库: gunzip -c ${DB_BACKUP} | docker compose exec -T db psql -U jcargo_user jcargo_db"
+echo "恢复上传:   tar xzf ${UPLOADS_BACKUP} -C deploy-files/uploads"

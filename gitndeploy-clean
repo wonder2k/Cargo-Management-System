@@ -1,6 +1,15 @@
 #!/bin/bash
-# JCargo CMS — Full clean deploy (rebuild + DB migration + seed)
+# JCargo CMS — 完整部署（重建 + 迁移 + 种子数据，数据卷保持）
+# ⚠️ 不使用 docker compose down -v，保留数据库和上传文件
 set -e
+
+echo "=========================================="
+echo " JCargo CMS — 完整部署"
+echo " 数据卷: ✅ 保留"
+echo " 数据库: ✅ 保留"
+echo " 上传文件: ✅ 保留"
+echo "=========================================="
+echo ""
 
 cd deploy-files
 docker compose down
@@ -9,16 +18,20 @@ git pull origin main
 cd deploy-files
 docker compose up --build -d
 
-# Wait for PostgreSQL to be ready
-echo "⏳ Waiting for database..."
+# 等待 PostgreSQL 就绪
+echo "⏳ 等待数据库就绪..."
 sleep 5
 
-# Run DB migration (schema changes)
-echo "📦 Running DB migration..."
-docker compose exec -T backend sh -c "npx drizzle-kit push" 2>/dev/null || echo "⚠️ Migration skipped (may need manual run)"
+# 运行数据库迁移（新字段自动添加，已有数据不受影响）
+echo "📦 运行数据库迁移..."
+docker compose exec -T backend npx drizzle-kit push 2>/dev/null || echo "⚠️ 迁移跳过"
 
-# Seed initial data (if not already seeded)
-echo "🌱 Running DB seed..."
-docker compose exec -T backend sh -c "npm run db:seed" 2>/dev/null || echo "⚠️ Seed skipped (may already exist)"
+# 种子数据（已存在则自动跳过，onConflictDoNothing）
+echo "🌱 种子数据..."
+docker compose exec -T backend sh -c "npm run db:seed" 2>/dev/null || echo "⚠️ 种子跳过"
 
-echo "✅ Full deploy complete"
+echo ""
+echo "✅ 完整部署完成"
+echo ""
+echo "查看日志: docker compose logs -f backend"
+echo "数据库备份: bash gitndbbackup"
