@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Form, Input, Button, App, Row, Col, Typography, Avatar, Divider, List, Space, Modal } from 'antd';
+import { Card, Form, Input, Button, App, Row, Col, Typography, Avatar, List, Space, Modal, Upload, Image } from 'antd';
 import { useAuth } from '../../context/AuthContext';
-import { authApi } from '../../services/api';
+import { authApi, uploadApi } from '../../services/api';
 import { useTranslation } from 'react-i18next';
-import { User, Building2, Phone, Mail, Upload, Shield, MapPin, Plus, Trash2 } from 'lucide-react';
+import { User, Building2, Phone, Mail, Upload as UploadIcon, Plus, Trash2 } from 'lucide-react';
 import { Warehouse } from '../../types';
 
 const { Title, Text } = Typography;
@@ -13,12 +13,14 @@ export const PersonalCenter: React.FC = () => {
   const [form] = Form.useForm();
   const [warehouseForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false);
   const { message } = App.useApp();
   const { t } = useTranslation();
 
   const profileUser = user as any;
   const warehouses: Warehouse[] = profileUser?.warehouses || [];
+  const avatarUrl = profileUser?.avatarUrl || '';
 
   const handleUpdate = async (values: any) => {
     if (!user) return;
@@ -27,9 +29,8 @@ export const PersonalCenter: React.FC = () => {
       await authApi.updateUser(user.id, values);
       await refreshUser();
       message.success(t('common.success'));
-    } catch {
-      message.error(t('common.error'));
-    } finally { setLoading(false); }
+    } catch { message.error(t('common.error')); }
+    finally { setLoading(false); }
   };
 
   const handleAddWarehouse = async (values: any) => {
@@ -53,6 +54,20 @@ export const PersonalCenter: React.FC = () => {
     } catch { message.error(t('common.error')); }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    if (!user) return false;
+    setUploadingLogo(true);
+    try {
+      const res = await uploadApi.uploadFile(file);
+      await authApi.updateUser(user.id, { avatarUrl: res.data.fileUrl });
+      await refreshUser();
+      message.success('Logo uploaded');
+      form.setFieldsValue({ avatarUrl: res.data.fileUrl });
+    } catch { message.error('Upload failed'); }
+    finally { setUploadingLogo(false); }
+    return false;
+  };
+
   const regions: string[] = profileUser?.regions || [];
 
   return (
@@ -66,16 +81,18 @@ export const PersonalCenter: React.FC = () => {
         <Col xs={24} lg={8}>
           <Space direction="vertical" className="w-full" size="middle">
             <Card className="text-center shadow-sm border-slate-200">
-              <Avatar size={80} className="bg-blue-100 text-blue-600 mb-4" icon={<User size={40} />} />
+              {avatarUrl ? (
+                <Image src={avatarUrl} preview={{ mask: null }}
+                  style={{ width: 80, height: 80, borderRadius: 40, objectFit: 'cover' }}
+                  className="mb-4 inline-block" />
+              ) : (
+                <Avatar size={80} className="bg-blue-100 text-blue-600 mb-4" icon={<User size={40} />} />
+              )}
               <Title level={4} className="mb-0">{user?.name}</Title>
               <Text type="secondary">{user?.email}</Text>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase">
-                  {user?.role}
-                </span>
-                <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold uppercase">
-                  {user?.status}
-                </span>
+                <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase">{user?.role}</span>
+                <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold uppercase">{user?.status}</span>
               </div>
             </Card>
 
@@ -108,7 +125,12 @@ export const PersonalCenter: React.FC = () => {
           <Card title={<div><Title level={5} className="mb-0">{t('profile.settings')}</Title><Text type="secondary" style={{ fontSize: 12 }}>{t('profile.settingsDesc')}</Text></div>}
             className="shadow-sm border-slate-200">
             <Form form={form} layout="vertical"
-              initialValues={{ name: user?.name, email: user?.email, companyName: (user as any)?.companyName, contactPerson: (user as any)?.contactPerson, phone: user?.phone, logoUrl: (user as any)?.logoUrl }}
+              initialValues={{
+                name: user?.name, email: user?.email,
+                companyName: (user as any)?.companyName,
+                contactPerson: (user as any)?.contactPerson,
+                phone: user?.phone, avatarUrl: avatarUrl,
+              }}
               onFinish={handleUpdate}>
               <Row gutter={16}>
                 <Col span={12}>
@@ -137,10 +159,22 @@ export const PersonalCenter: React.FC = () => {
               <Form.Item name="phone" label={t('profile.phoneNumber')}>
                 <Input prefix={<Phone size={16} className="text-slate-400" />} placeholder="+86 138-0000-0000" />
               </Form.Item>
-              <Form.Item name="logoUrl" label={t('profile.logo')}>
-                <Input prefix={<Upload size={16} className="text-slate-400" />} placeholder="https://example.com/logo.png" />
-                <Text type="secondary" style={{ fontSize: 11 }}>{t('profile.logoDesc')}</Text>
-              </Form.Item>
+
+              {/* Logo upload */}
+              <div className="mb-4">
+                <Text strong className="block mb-2">{t('profile.logo')}</Text>
+                <Space>
+                  <Upload accept=".png,.jpg,.jpeg" showUploadList={false}
+                    beforeUpload={handleLogoUpload}>
+                    <Button loading={uploadingLogo} icon={<UploadIcon size={16} />}>{t('profile.logo')}</Button>
+                  </Upload>
+                  <Form.Item name="avatarUrl" className="mb-0 flex-1" style={{ minWidth: 250 }}>
+                    <Input placeholder="https://example.com/logo.png" />
+                  </Form.Item>
+                </Space>
+                <Text type="secondary" style={{ fontSize: 11 }} className="block mt-1">{t('profile.logoDesc')}</Text>
+              </div>
+
               <div className="pt-4 border-t flex justify-end">
                 <Button type="primary" htmlType="submit" loading={loading} size="large">{t('profile.save')}</Button>
               </div>

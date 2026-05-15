@@ -197,35 +197,41 @@ router.get('/users', authenticateToken, authorizeRole(['admin']), async (_req, r
   }
 });
 
-// 7. Update user (admin approve/reject/change role)
-router.put('/users/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+// 7. Update user (admin approve/reject + profile editing)
+router.put('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { role, status, tier } = req.body;
+  const isAdmin = req.user?.role === 'admin';
 
   try {
     const updateData: any = {};
-    if (role) updateData.role = role;
-    if (status) updateData.status = status;
-    if (tier !== undefined) updateData.tier = tier;
+    // Accept ALL safe profile fields
+    const profileFields = ['name', 'companyName', 'phone', 'contactPerson', 'avatarUrl', 'regions', 'warehouses'];
+    for (const field of profileFields) {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    }
+    // Admin-only fields
+    if (isAdmin) {
+      if (req.body.role) updateData.role = req.body.role;
+      if (req.body.status) updateData.status = req.body.status;
+      if (req.body.tier !== undefined) updateData.tier = req.body.tier;
+    }
 
     const result = await db.update(users)
       .set(updateData)
       .where(eq(users.id, parseInt(id)))
-      .returning({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        role: users.role,
-        status: users.status,
-        tier: users.tier,
-      });
+      .returning();
 
-    if (result.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json(Array.isArray(result) ? result[0] : result);
+    if (result.length === 0) return res.status(404).json({ message: 'User not found' });
+    const user = Array.isArray(result) ? result[0] : result;
+    res.json({
+      id: user.id, email: user.email, name: user.name,
+      role: user.role, status: user.status, tier: user.tier,
+      companyName: user.companyName, phone: user.phone,
+      contactPerson: user.contactPerson, avatarUrl: user.avatarUrl,
+      regions: user.regions, warehouses: user.warehouses,
+    });
   } catch (error) {
+    console.error('[Auth] Update user error:', error);
     res.status(500).json({ message: 'Failed to update user' });
   }
 });
