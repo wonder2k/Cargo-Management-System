@@ -29,6 +29,7 @@ const LangToggle = () => {
 };
 
 const LoginPage = () => {
+  const { t } = useTranslation();
   const { login, demoLogin, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = React.useState('');
@@ -142,6 +143,7 @@ const LoginPage = () => {
 };
 
 const RegisterPage = () => {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = React.useState({
