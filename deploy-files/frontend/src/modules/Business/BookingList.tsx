@@ -212,24 +212,24 @@ export const BookingList: React.FC = () => {
         <Form form={form} layout="vertical" onFinish={handleCreate} initialValues={{ pieces: 1, currency: 'CNY', declarationMethod: 'formal' }}>
           <Row gutter={16}>
              <Col span={12}>
-               <Form.Item name="customerId" label="Customer" rules={[{ required: true }]}>
+               <Form.Item name="customerId" label={t('common.customer')||'Customer'} rules={[{ required: true }]}>
                  <Select options={customers.map(c => ({ label: c.name, value: c.id }))} />
                </Form.Item>
              </Col>
              <Col span={12}>
-               <Form.Item name="rateId" label="Route" rules={[{ required: true }]}>
+               <Form.Item name="rateId" label={t('common.route')||'Route'} rules={[{ required: true }]}>
                  <Select options={rates.map(r => ({ label: `[${r.carrier}] ${r.origin}→${r.destination}`, value: r.id }))} />
                </Form.Item>
              </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="flightDate" label="Flight Date" rules={[{ required: true }]}>
+              <Form.Item name="flightDate" label={t('common.flightDate')||'Flight Date'} rules={[{ required: true }]}>
                 <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="declarationMethod" label="Declaration" rules={[{ required: true }]}>
+              <Form.Item name="declarationMethod" label={t('common.declaration')||'Declaration'} rules={[{ required: true }]}>
                 <Select options={[
                   { label: 'Formal', value: 'formal' },
                   { label: '9610', value: '9610' },
@@ -239,31 +239,31 @@ export const BookingList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="unitPrice" label="Unit Price" rules={[{ required: true }]}>
+              <Form.Item name="unitPrice" label={t('common.unitPrice')||'Unit Price'} rules={[{ required: true }]}>
                 <InputNumber className="w-full" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
              <Col span={8}>
-               <Form.Item name="pieces" label="Pieces" rules={[{ required: true }]}><InputNumber className="w-full" min={1} /></Form.Item>
+               <Form.Item name="pieces" label={t('common.pieces')||'Pieces'} rules={[{ required: true }]}><InputNumber className="w-full" min={1} /></Form.Item>
              </Col>
              <Col span={8}>
-               <Form.Item name="weight" label="Weight" rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="KG" /></Form.Item>
+               <Form.Item name="weight" label={t('common.weight')||'Weight'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="KG" /></Form.Item>
              </Col>
              <Col span={8}>
-               <Form.Item name="volume" label="Volume" rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="CBM" /></Form.Item>
+               <Form.Item name="volume" label={t('common.volume')||'Volume'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="CBM" /></Form.Item>
              </Col>
           </Row>
-          <Form.Item name="goodsDescription" label="Goods Description" rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="goodsDescription" label={t('common.goodsDesc')||'Goods Description'} rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
 
-      <Modal title={t('common.submit')} open={actionModalOpen} onCancel={() => setActionModalOpen(false)} onOk={() => clientForm.submit()}>
+      <Modal title={t('common.submit')||'Submit'} open={actionModalOpen} onCancel={() => setActionModalOpen(false)} onOk={() => clientForm.submit()}>
         <Form form={clientForm} layout="vertical" onFinish={handleClientAction}>
-           <Form.Item name="shipperInfo" label="Shipper Info" rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
-           <Form.Item name="consigneeInfo" label="Consignee Info" rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
-           <Form.Item name="alsoNotify" label="Notify Party"><Input.TextArea rows={2} /></Form.Item>
+           <Form.Item name="shipperInfo" label={t('common.shipperInfo')||'Shipper Info'} rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
+           <Form.Item name="consigneeInfo" label={t('common.consigneeInfo')||'Consignee Info'} rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
+           <Form.Item name="alsoNotify" label={t('common.notifyParty')||'Notify Party'}><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
 

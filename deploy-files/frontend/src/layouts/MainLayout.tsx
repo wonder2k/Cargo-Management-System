@@ -160,14 +160,14 @@ export const MainLayout: React.FC = () => {
               items: [
                 {
                   key: 'profile',
-                  label: 'Profile',
+                  label: t('common.profile') || 'Profile',
                   icon: <User size={16} />,
                   onClick: () => navigate('/profile')
                 },
                 { type: 'divider' },
                 {
                   key: 'logout',
-                  label: 'Logout',
+                  label: t('common.logout') || 'Logout',
                   icon: <LogOut size={16} />,
                   onClick: handleLogout
                 }

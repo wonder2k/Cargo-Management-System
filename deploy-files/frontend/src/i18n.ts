@@ -92,7 +92,19 @@ const resources = {
         upload: "Upload",
         close: "Close",
         confirmAction: "Confirm",
-        noData: "No data"
+        noData: "No data",
+        flightDate: "Flight Date",
+        goodsDesc: "Goods Description",
+        shipperInfo: "Shipper Info",
+        consigneeInfo: "Consignee Info",
+        notifyParty: "Notify Party",
+        clientCode: "Client Code",
+        customerType: "Customer Type",
+        creditLimit: "Credit Limit",
+        paymentTerms: "Payment Terms",
+        billingEmail: "Billing Email",
+        tierLabel: "Tier",
+        unitPrice: "Unit Price"
       },
       menu: {
         dashboard: "Dashboard",
@@ -382,7 +394,19 @@ const resources = {
         upload: "上传",
         close: "关闭",
         confirmAction: "确认",
-        noData: "暂无数据"
+        noData: "暂无数据",
+        flightDate: "航班日期",
+        goodsDesc: "货物描述",
+        shipperInfo: "发货人信息",
+        consigneeInfo: "收货人信息",
+        notifyParty: "通知方",
+        clientCode: "客户代码",
+        customerType: "客户类型",
+        creditLimit: "信用额度",
+        paymentTerms: "付款条件",
+        billingEmail: "账单邮箱",
+        tierLabel: "等级",
+        unitPrice: "单价"
       },
       menu: {
         dashboard: "工作台",

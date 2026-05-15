@@ -345,11 +345,19 @@ export const PricingList: React.FC = () => {
 
                   return (
                       <div className="flex flex-col">
+                        {adjustmentType === 'manual' && selectedRateIds.includes(r.id) ? (
+                          <InputNumber size="small" min={tieredBase} style={{ width: 120 }}
+                            value={customPrices[r.id] || tieredBase}
+                            status={(customPrices[r.id] || 0) < tieredBase ? 'error' : undefined}
+                            onChange={(v) => v !== null && setCustomPrices(prev => ({ ...prev, [r.id]: v || 0 }))}
+                            formatter={value => `${r.currency} ${value}`} />
+                        ) : (
                           <Popover content={breakdown} title="Price Breakdown" trigger="hover">
                             <span className="text-sm font-bold text-blue-600 cursor-help border-b border-dotted border-blue-300">
                               {r.currency} {finalPrice.toFixed(2)} / KG
                             </span>
                           </Popover>
+                        )}
                           {flatFees > 0 && flatBreakdown && (
                             <Popover content={flatBreakdown} title="Flat Fee Breakdown" trigger="hover">
                               <span className="text-[10px] text-amber-600 font-bold cursor-help border-b border-dotted border-amber-300">
@@ -464,19 +472,19 @@ export const PricingList: React.FC = () => {
               <Input />
             </Form.Item>
           ) : (
-            <Form.Item name="customerId" label="Select Customer" rules={[{ required: true }]}>
+            <Form.Item name="customerId" label={t('common.customer')||'Select Customer'} rules={[{ required: true }]}>
               <Select
                 showSearch
-                placeholder="Search customer by name or code..."
+                placeholder={t('common.search') + '...'}
                 optionFilterProp="label"
                 options={customers.map(c => ({ label: `${c.code} - ${c.name}`, value: c.id }))}
               />
             </Form.Item>
           )}
-          <Form.Item name="recipientInfo" label="Recipient Info">
-             <Input.TextArea rows={3} placeholder="Contact Person, Phone..." />
+          <Form.Item name="recipientInfo" label={t('pricing.recipient')||'Recipient Info'}>
+             <Input.TextArea rows={3} placeholder={t('common.name')+', '+t('common.phone')+'...'} />
           </Form.Item>
-          <Form.Item name="validUntil" label="Valid Until" initialValue={new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]}>
+          <Form.Item name="validUntil" label={t('pricing.validUntil')||'Valid Until'} initialValue={new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]}>
              <Input type="date" />
           </Form.Item>
         </Form>
