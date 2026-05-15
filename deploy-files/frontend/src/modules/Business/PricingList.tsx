@@ -402,7 +402,7 @@ export const PricingList: React.FC = () => {
              <Col span={6}><Form.Item name="origin" label={t('common.origin')||'Origin'} rules={[{ required: true }]}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="destination" label={t('common.destination')||'Destination'} rules={[{ required: true }]}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="carrier" label={t('common.carrier')||'Carrier'} rules={[{ required: true }]}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="region" label={t('common.region')||'Region'} initialValue="AsiaPacific"><Select options={[{label:'AsiaPacific',value:'AsiaPacific'},{label:'Americas',value:'Americas'},{label:'Europe',value:'Europe'}]} /></Form.Item></Col>
+             <Col span={6}><Form.Item name="region" label={t('common.region')||'Region'} initialValue="AsiaPacific"><Select options={[{label:'AsiaPacific',value:'AsiaPacific'},{label:'Americas',value:'Americas'},{label:'Europe',value:'Europe'},{label:'MESA',value:'MESA'},{label:'Africa',value:'Africa'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>

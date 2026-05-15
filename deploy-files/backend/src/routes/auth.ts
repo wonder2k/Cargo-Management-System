@@ -15,7 +15,8 @@ const setAuthCookies = (req: any, res: any, user: any) => {
     role: user.role,
     status: user.status,
     name: user.name,
-    tier: user.tier
+    tier: user.tier,
+    regions: user.regions || [],
   };
 
   const accessToken = jwt.sign(

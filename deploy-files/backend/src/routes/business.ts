@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { customers, bookings, rates, quotes, mawbs, accountsReceivable, accountsPayable } from '../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -102,9 +102,19 @@ router.delete('/customers/:id', authenticateToken, async (req, res) => {
 });
 
 // ====== Rates CRUD ======
-router.get('/rates', authenticateToken, async (_req, res) => {
+router.get('/rates', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const allRates = await db.select().from(rates).orderBy(desc(rates.createdAt));
+    const isAdmin = req.user?.role === 'admin';
+    const userRegions: string[] = (req.user as any)?.regions || [];
+
+    let allRates;
+    if (isAdmin || userRegions.length === 0) {
+      allRates = await db.select().from(rates).orderBy(desc(rates.createdAt));
+    } else {
+      allRates = await db.select().from(rates)
+        .where(inArray(rates.region, userRegions))
+        .orderBy(desc(rates.createdAt));
+    }
     res.json(allRates);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch rates' });
