@@ -21,7 +21,7 @@ const LangToggle = () => {
   return (
     <button
       onClick={() => i18n.changeLanguage(next)}
-      className="absolute top-4 right-4 text-xs text-slate-400 hover:text-white bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50 transition"
+      className="absolute top-3 right-3 z-10 text-xs text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-full border border-slate-200 transition"
     >
       {next === 'zh' ? '中文' : 'English'}
     </button>
@@ -70,9 +70,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative">
-      <LangToggle />
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+        <LangToggle />
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>
@@ -195,9 +195,9 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative">
-      <LangToggle />
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden relative">
+        <LangToggle />
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>

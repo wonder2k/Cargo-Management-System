@@ -144,7 +144,11 @@ const resources = {
         terminal: "Terminal",
         departure: "Departure",
         arrival: "Arrival",
-        logs: "Operation Logs"
+        logs: "Operation Logs",
+        whseEntryConfirmed: "Whse Entry Confirmed",
+        setTerminalIn: "Terminal In",
+        exception: "Exception",
+        financeSettlement: "Finance Settlement"
       },
       finance: {
         title: "Financial Settlement",
@@ -174,12 +178,6 @@ const resources = {
           finalized: "Finalized"
         }
       },
-      operation: {
-        whseEntryConfirmed: "Whse Entry Confirmed",
-        setTerminalIn: "Terminal In",
-        exception: "Exception",
-        financeSettlement: "Finance Settlement"
-      }
     }
   },
   zh: {
@@ -323,7 +321,11 @@ const resources = {
         terminal: "分拨理货",
         departure: "起飞",
         arrival: "到达",
-        logs: "操作日志"
+        logs: "操作日志",
+        whseEntryConfirmed: "入库确认",
+        setTerminalIn: "分拨理货",
+        exception: "异常",
+        financeSettlement: "财务结算"
       },
       finance: {
         title: "结算中心",
@@ -352,12 +354,6 @@ const resources = {
           client_accepted: "客户已确认",
           finalized: "已完成"
         }
-      },
-      operation: {
-        whseEntryConfirmed: "入库确认",
-        setTerminalIn: "分拨理货",
-        exception: "异常",
-        financeSettlement: "财务结算"
       }
     }
   }
