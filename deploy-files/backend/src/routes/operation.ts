@@ -45,9 +45,15 @@ router.post('/mawbs/:id/status', authenticateToken, async (req, res) => {
     const [mawb] = await db.select().from(mawbs).where(eq(mawbs.id, parseInt(id)));
     if (!mawb) return res.status(404).json({ message: 'MAWB not found' });
 
+    // Convert string timestamps to Date objects for Drizzle
+    const updateData: any = { ...rest };
+    if (updateData.atd && typeof updateData.atd === 'string') updateData.atd = new Date(updateData.atd);
+    if (updateData.ata && typeof updateData.ata === 'string') updateData.ata = new Date(updateData.ata);
+    if (updateData.flightDate && typeof updateData.flightDate === 'string') updateData.flightDate = new Date(updateData.flightDate);
+
     await db.update(mawbs).set({
       status,
-      ...rest,
+      ...updateData,
       updatedAt: new Date(),
     }).where(eq(mawbs.id, parseInt(id)));
 

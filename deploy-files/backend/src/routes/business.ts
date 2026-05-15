@@ -151,8 +151,11 @@ router.get('/quotes', authenticateToken, async (_req, res) => {
 
 router.post('/quotes', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const body = { ...req.body };
+    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
+    if (body.flightDate && typeof body.flightDate === 'string') body.flightDate = new Date(body.flightDate);
     const result = await db.insert(quotes).values({
-      ...req.body,
+      ...body,
       creatorId: req.user!.id,
       userName: req.user!.name
     }).returning();
@@ -164,8 +167,10 @@ router.post('/quotes', authenticateToken, async (req: AuthRequest, res) => {
 
 router.put('/quotes/:id', authenticateToken, async (req, res) => {
   try {
+    const body = { ...req.body };
+    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
     const result = await db.update(quotes)
-      .set(req.body)
+      .set(body)
       .where(eq(quotes.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Quote not found' });
@@ -187,8 +192,11 @@ router.get('/bookings', authenticateToken, async (_req, res) => {
 
 router.post('/bookings', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const body = { ...req.body };
+    if (body.flightDate && typeof body.flightDate === 'string') body.flightDate = new Date(body.flightDate);
+    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
     const result = await db.insert(bookings).values({
-      ...req.body,
+      ...body,
       bookingNo: `BK-${Date.now().toString().slice(-6)}`,
       creatorId: req.user!.id
     }).returning();
@@ -200,8 +208,11 @@ router.post('/bookings', authenticateToken, async (req: AuthRequest, res) => {
 
 router.put('/bookings/:id', authenticateToken, async (req, res) => {
   try {
+    const body = { ...req.body };
+    if (body.flightDate && typeof body.flightDate === 'string') body.flightDate = new Date(body.flightDate);
+    if (body.validUntil && typeof body.validUntil === 'string') body.validUntil = new Date(body.validUntil);
     const result = await db.update(bookings)
-      .set({ ...req.body, updatedAt: new Date() })
+      .set({ ...body, updatedAt: new Date() })
       .where(eq(bookings.id, parseInt(req.params.id)))
       .returning();
     if (result.length === 0) return res.status(404).json({ message: 'Booking not found' });
