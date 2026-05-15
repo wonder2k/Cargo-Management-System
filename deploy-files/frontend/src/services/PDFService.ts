@@ -162,6 +162,132 @@ export const PDFService = {
     doc.save(`${quotation.quotationNo}_${localize(quotation.customerName)}.pdf`);
   },
 
+  // HTML-based printable quote — handles Chinese text natively via browser
+  printQuote: (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
+    const isZH = lang === 'zh';
+    const logoHtml = profile?.avatarUrl
+      ? `<img src="${profile.avatarUrl}" style="max-height:50px;max-width:180px;object-fit:contain;" />`
+      : '';
+
+    const routeRows = quotation.routes.map((r: any) => {
+      const customs = r.customsMethods?.['formal'] || r.customs;
+      const miscText = (r.miscFees || []).map((m: any) =>
+        `${m.name}: ${m.amount} (${m.unit === 'per_kg' ? 'KG' : 'Ship'})`
+      ).join('<br/>');
+      const fuelVal = Number(r.fuel) || 0;
+      const secVal = Number(r.security) || 0;
+      const termVal = Number(r.terminal) || 0;
+      const cusVal = Number(customs?.amount) || 0;
+      const cusIsPerKg = customs?.unit === 'per_kg';
+      const breakdownLines = [
+        `Freight: ${r.finalPrice.toFixed(2)}`,
+        ...(fuelVal > 0 ? [`Fuel: ${fuelVal}`] : []),
+        ...(secVal > 0 ? [`Security: ${secVal}`] : []),
+        ...(termVal > 0 ? [`Terminal: ${termVal}`] : []),
+        ...(cusVal > 0 ? [`Customs: ${cusVal} (${cusIsPerKg ? 'KG' : 'Ship'})`] : []),
+        ...((r.miscFees || []).length > 0 ? miscText.split('<br/>') : []),
+      ];
+      return `<tr>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-family:monospace;text-align:center">${r.origin}</td>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-family:monospace;text-align:center">${r.destination}</td>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:600">${r.carrier}</td>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:11px;color:#64748b">${breakdownLines.join('<br/>')}</td>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#2563eb">
+          ${quotation.currency} ${Number(r.finalPrice).toFixed(2)}/KG
+          ${r.flatFees > 0 ? `<br/><span style="font-size:10px;color:#d97706">+ ${quotation.currency} ${r.flatFees} (Flat)</span>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+
+    const terms = isZH
+      ? ['运价以订舱时的舱位情况为准。', '体积重量按 1:6000 计算。', '除非特别说明，报价仅适用于普货。', '最终费用按航司分单上的实际重量/尺寸计算。']
+      : ['Rates are subject to space availability at time of booking.', 'Volumetric calculations apply (1:6000 ratio).',
+         'Rates valid for general cargo only unless specified.', 'Final charges based on actual weight/dim as per carrier SLI.'];
+
+    const html = `<!DOCTYPE html>
+<html lang="${lang}">
+<head><meta charset="UTF-8"><title>${quotation.quotationNo}</title>
+<style>
+  @page { margin: 20mm 15mm; size: A4; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif; color: #1e293b; margin: 0; padding: 20px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+  .company-info { text-align: right; font-size: 12px; color: #64748b; }
+  .company-info strong { font-size: 16px; color: #2563eb; }
+  .title { text-align: center; font-size: 22px; font-weight: 700; color: #2563eb; margin: 20px 0; }
+  .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; margin-bottom: 24px; }
+  .info-box .left { font-size: 13px; }
+  .info-box .right { text-align: right; font-size: 13px; }
+  .info-box .label { color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { background: #0f172a; color: #fff; padding: 8px; font-size: 12px; text-align: center; }
+  td { padding: 8px; border: 1px solid #e2e8f0; font-size: 13px; }
+  tr:nth-child(even) { background: #f8fafc; }
+  .terms { margin-top: 20px; font-size: 11px; color: #94a3b8; }
+  .footer { text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 30px; }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none !important; }
+  }
+</style></head>
+<body>
+  <div class="header">
+    <div class="logo-area">${logoHtml || '<div style="font-size:18px;font-weight:700;color:#1e293b">JCargo CMS</div>'}</div>
+    <div class="company-info">
+      <strong>${profile?.companyName || 'CargoSystem Global'}</strong><br/>
+      ${isZH?'联系人':'Contact'}: ${profile?.contactPerson || profile?.name || '-'}<br/>
+      ${isZH?'电话':'Phone'}: ${profile?.phone || '-'}<br/>
+      Email: ${profile?.email || ''}
+    </div>
+  </div>
+
+  <div class="title">${isZH ? '空运报价单' : 'AIR FREIGHT QUOTATION'}</div>
+
+  <div class="info-box">
+    <div class="left">
+      <div class="label">${isZH ? '报价对象' : 'PREPARED FOR'}</div>
+      <div style="font-size:16px;font-weight:600">${quotation.customerName}</div>
+      <div style="font-size:12px;color:#64748b;white-space:pre-wrap;margin-top:4px">${quotation.recipientInfo || ''}</div>
+    </div>
+    <div class="right">
+      <div class="label">${isZH ? '报价单号' : 'Quote No'}</div>
+      <div style="font-size:16px;font-weight:700;color:#2563eb;font-family:monospace">${quotation.quotationNo}</div>
+      <div style="margin-top:8px;font-size:12px;color:#64748b">
+        ${isZH ? '日期' : 'Date'}: ${dayjs().format('YYYY-MM-DD')}<br/>
+        ${isZH ? '有效期至' : 'Valid Until'}: ${quotation.validUntil}
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>${isZH ? '始发站' : 'Origin'}</th>
+      <th>${isZH ? '目的站' : 'Destination'}</th>
+      <th>${isZH ? '航司' : 'Carrier'}</th>
+      <th>${isZH ? '费用明细' : 'Breakdown'}</th>
+      <th>${isZH ? '最终单价' : 'Final Price'}</th>
+    </tr></thead>
+    <tbody>${routeRows}</tbody>
+  </table>
+
+  <div class="terms">
+    <strong>${isZH ? '条款说明' : 'Notes & Terms'}:</strong><br/>
+    ${terms.map(t => `• ${t}`).join('<br/>')}
+  </div>
+
+  <div class="footer">${isZH ? '本报价单由系统自动生成，无需签名。' : 'This is a computer-generated proposal. No signature required.'}</div>
+</body></html>`;
+
+    // Open in new window for print
+    const win = window.open('', '_blank');
+    if (!win) { /* popup blocked */ return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 500);
+  },
+
   generateInvoice: (invoice: any, customer: any, mawb?: any) => {
     const doc = new jsPDF();
     doc.setFontSize(22);

@@ -84,13 +84,13 @@ export const PricingList: React.FC = () => {
       message.error(t('common.error'));
     }
 
-    // Generate PDF (separate try-catch so save is not blocked by PDF errors)
+    // Generate printable quote (HTML-based, handles Chinese text correctly)
     try {
       const customer = customers.find(c => String(c.id) === String(pendingQuotation.customerId));
       const currentLang = i18n.language?.startsWith('zh') ? 'zh' : 'en';
-      PDFService.generateProposal(pendingQuotation, customer, profile, currentLang);
+      PDFService.printQuote(pendingQuotation, customer, profile, currentLang);
     } catch (e) {
-      console.error('PDF generation error:', e);
+      console.error('Print generation error:', e);
     }
   };
 
@@ -163,7 +163,7 @@ export const PricingList: React.FC = () => {
         origin: r.origin,
         destination: r.destination,
         carrier: r.carrier,
-        basePrice: r.baseFreight,
+        basePrice: getTierAdjustedBase(r),
         finalPrice: calculateFinalPrice(r),
         adjustment: adjustmentType === 'percent' ? `+${adjustmentValue}%` : 
                    adjustmentType === 'fixed' ? `+${adjustmentValue}` : 'Manual',
@@ -302,16 +302,10 @@ export const PricingList: React.FC = () => {
               )
             },
             {
-              title: 'Base Price' + ((profile?.tier || 0) > 0 ? ` (Tier${profile?.tier})` : ''),
+              title: 'Base Price',
               render: (_, r) => {
                 const tieredBase = getTierAdjustedBase(r);
-                const showAdj = (profile?.tier || 0) > 0 && tieredBase > r.baseFreight;
-                return (
-                  <div className="flex flex-col">
-                    <span className="font-mono font-bold text-slate-700">{r.currency} {tieredBase.toFixed(2)}</span>
-                    {showAdj && <span className="text-[10px] text-orange-500">base {r.baseFreight}+tier</span>}
-                  </div>
-                );
+                return <span className="font-mono font-bold text-slate-700">{r.currency} {tieredBase.toFixed(2)}</span>;
               }
             },
             {
@@ -326,8 +320,7 @@ export const PricingList: React.FC = () => {
 
                   const breakdown = (
                     <div className="text-xs space-y-1" style={{ minWidth: 200 }}>
-                      <div className="flex justify-between gap-4"><span>Base + Tier:</span><span className="font-mono">{r.baseFreight.toFixed(2)}{(profile?.tier||0)>0?` + ${((r.currency==='CNY'?0.5:0.2)*(profile?.tier||0)).toFixed(2)}`:''}</span></div>
-                      <div className="flex justify-between gap-4 text-blue-700 font-bold"><span>Tiered Base:</span><span className="font-mono">{tieredBase.toFixed(2)}</span></div>
+                      <div className="flex justify-between gap-4"><span>Base:</span><span className="font-mono">{tieredBase.toFixed(2)}</span></div>
                       {r.fuelSurcharge > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Fuel:</span><span className="font-mono">+{r.fuelSurcharge.toFixed(2)}</span></div>}
                       {r.securityScreening > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Security:</span><span className="font-mono">+{r.securityScreening.toFixed(2)}</span></div>}
                       {r.terminalHandling > 0 && <div className="flex justify-between gap-4 text-slate-500"><span>Terminal:</span><span className="font-mono">+{r.terminalHandling.toFixed(2)}</span></div>}
