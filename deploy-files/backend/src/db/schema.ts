@@ -91,6 +91,7 @@ export const bookings = pgTable("bookings", {
   origin: varchar("origin", { length: 10 }),
   destination: varchar("destination", { length: 10 }),
   carrier: varchar("carrier", { length: 20 }),
+  flightNo: varchar("flight_no", { length: 20 }),
   flightDate: timestamp("flight_date"),
   pieces: integer("pieces"),
   weight: doublePrecision("weight"),
@@ -105,6 +106,8 @@ export const bookings = pgTable("bookings", {
   alsoNotify: text("also_notify"),
   internalNotes: text("internal_notes"),
   status: varchar("status", { length: 50 }).default("pending"),
+  manifestFileUrl: text("manifest_file_url"),
+  manifestFileName: text("manifest_file_name"),
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -134,6 +137,8 @@ export const mawbs = pgTable("mawbs", {
   trackingLogs: jsonb("tracking_logs"),
   lastActivity: text("last_activity"),
   remarks: text("remarks"),
+  draftFileUrl: text("draft_file_url"),
+  draftFileName: text("draft_file_name"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -162,6 +167,8 @@ export const accountsPayable = pgTable("accounts_payable", {
   currency: varchar("currency", { length: 10 }).default("CNY"),
   status: varchar("status", { length: 20 }).default("pending"),
   lineItems: jsonb("line_items"),
+  vendorInvoiceUrl: text("vendor_invoice_url"),
+  paidAmount: doublePrecision("paid_amount"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

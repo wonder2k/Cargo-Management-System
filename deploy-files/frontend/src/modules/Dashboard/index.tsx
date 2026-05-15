@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Table, Typography, Tag, Progress, Space, Badge } from 'antd';
-import { 
-  Package, Users, TrendingUp, AlertCircle, Clock, CheckCircle, 
-  ArrowUpRight, ArrowDownRight, Plane, FileText, Wallet
-} from 'lucide-react';
+import { Package, TrendingUp, AlertCircle, Clock, CheckCircle, ArrowUpRight, Plane, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import api from '../../services/api';
+import { businessApi, operationApi, financeApi } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
@@ -13,52 +10,73 @@ const { Title, Text } = Typography;
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const [stats, setStats] = useState({
-    totalShipments: 0,
-    pendingBookings: 0,
-    activeOperations: 0,
-    monthlyRevenue: 0,
-    revenueGrowth: 12.5,
-    shipmentGrowth: 8.2
+    totalShipments: 0, pendingBookings: 0, activeOperations: 0,
+    monthlyRevenue: 0, revenueGrowth: 12.5, shipmentGrowth: 8.2
   });
-  const [recentOperations, setRecentOperations] = useState([]);
+  const [recentOperations, setRecentOperations] = useState<any[]>([]);
+  const [mawbStats, setMawbStats] = useState({ pending: 0, departed: 0, arrived: 0, exception: 0 });
+  const [creditWarnings, setCreditWarnings] = useState<any[]>([]);
+  const [stuckCount, setStuckCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/business/dashboard-stats');
-        setStats(response.data.stats);
-        setRecentOperations(response.data.recentOperations);
-      } catch (err) {
-        // Fallback to mock if API fails during transition
-        setStats({
-          totalShipments: 1254,
-          pendingBookings: 24,
-          activeOperations: 45,
-          monthlyRevenue: 854300,
-          revenueGrowth: 12.5,
-          shipmentGrowth: 8.2
-        });
-        setRecentOperations([
-          { key: '1', no: 'MAWB-2025001', flow: 'PVG - FRA', status: 'In Transit', date: '2025-05-01' },
-          { key: '2', no: 'MAWB-2025002', flow: 'HKG - LAX', status: 'Completed', date: '2025-05-01' },
-          { key: '3', no: 'MAWB-2025003', flow: 'CAN - AMS', status: 'Draft', date: '2025-05-02' },
+        const [dashRes, mawbRes, arRes, custRes] = await Promise.all([
+          businessApi.getStats().catch(() => null),
+          operationApi.getMawbs().catch(() => null),
+          financeApi.getAR().catch(() => null),
+          businessApi.getCustomers().catch(() => null),
         ]);
-      } finally {
-        setLoading(false);
-      }
+
+        if (dashRes) {
+          setStats(dashRes.data.stats);
+          setRecentOperations(dashRes.data.recentOperations || []);
+        }
+
+        // Real MAWB status distribution
+        if (mawbRes && mawbRes.data) {
+          const mawbs = mawbRes.data;
+          setMawbStats({
+            pending: mawbs.filter((m: any) => m.status === 'pending').length,
+            departed: mawbs.filter((m: any) => m.status === 'departed').length,
+            arrived: mawbs.filter((m: any) => m.status === 'arrived').length,
+            exception: mawbs.filter((m: any) => m.status === 'exception').length,
+          });
+          // Stuck count — active for 2h+ without update
+          const twoHAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+          setStuckCount(mawbs.filter((m: any) =>
+            m.status !== 'closed' && m.status !== 'arrived' &&
+            new Date(m.updatedAt || m.createdAt) < twoHAgo
+          ).length);
+        }
+
+        // Credit warnings from AR data
+        if (arRes && arRes.data && custRes && custRes.data) {
+          const arItems = arRes.data;
+          const customers = custRes.data;
+          const balances: Record<string, number> = {};
+          arItems.forEach((ar: any) => {
+            if (ar.status !== 'paid') {
+              balances[ar.customerId] = (balances[ar.customerId] || 0) + Number(ar.totalAmount);
+            }
+          });
+          setCreditWarnings(customers
+            .filter((c: any) => balances[c.id] >= (c.creditLimit || 0) && c.creditLimit > 0)
+            .map((c: any) => ({ name: c.name, balance: balances[c.id], limit: c.creditLimit, currency: c.creditCurrency || 'CNY' }))
+          );
+        }
+      } catch { /* use defaults */ }
+      finally { setLoading(false); }
     };
-    fetchDashboardData();
+    fetchData();
   }, []);
 
   const chartData = [
-    { name: 'Mon', value: 40 },
-    { name: 'Tue', value: 30 },
-    { name: 'Wed', value: 60 },
-    { name: 'Thu', value: 80 },
-    { name: 'Fri', value: 50 },
-    { name: 'Sat', value: 20 },
-    { name: 'Sun', value: 10 },
+    { name: t('booking.status.pending'), value: mawbStats.pending },
+    { name: t('booking.status.departed'), value: mawbStats.departed },
+    { name: t('booking.status.arrived'), value: mawbStats.arrived },
+    { name: t('operation.exception'), value: mawbStats.exception },
   ];
 
   return (
@@ -66,89 +84,54 @@ export const Dashboard: React.FC = () => {
       <div className="flex justify-between items-end">
         <div>
           <Title level={2} className="!mb-1">{t('dashboard.overview')}</Title>
-          <Text type="secondary">{t('dashboard.overviewSubtitle', 'Real-time logistics monitoring and performance metrics')}</Text>
+          <Text type="secondary">{t('dashboard.overviewSubtitle')}</Text>
         </div>
         <div className="bg-slate-100 p-1 rounded-lg flex gap-2">
-          <Badge status="processing" text={t('dashboard.systemLive', 'System Live')} className="px-3" />
+          <Badge status="processing" text={t('dashboard.systemLive')} className="px-3" />
         </div>
       </div>
-      
+
       <Row gutter={[20, 20]}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm border-l-4 border-blue-500 overflow-hidden">
-            <div className="flex justify-between items-start">
-              <Statistic
-                title={<span className="text-slate-500 font-medium">{t('dashboard.totalShipments')}</span>}
-                value={stats.totalShipments}
-                prefix={<Package className="text-blue-500 mr-2" size={18} />}
-              />
-              <Tag color="success" className="m-0 flex items-center gap-1 border-none bg-green-50 text-green-600">
-                <ArrowUpRight size={12} /> {stats.shipmentGrowth}%
-              </Tag>
-            </div>
+          <Card bordered={false} className="shadow-sm border-l-4 border-blue-500">
+            <Statistic title={t('dashboard.totalShipments')} value={stats.totalShipments}
+              prefix={<Package className="text-blue-500 mr-2" size={18} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} className="shadow-sm border-l-4 border-amber-500">
-            <div className="flex justify-between items-start">
-              <Statistic
-                title={<span className="text-slate-500 font-medium">{t('dashboard.pendingBookings')}</span>}
-                value={stats.pendingBookings}
-                prefix={<Clock className="text-amber-500 mr-2" size={18} />}
-              />
-              <Tag color="warning" className="m-0 border-none bg-amber-50 text-amber-600">{t('dashboard.actionRequired', 'Action Required')}</Tag>
-            </div>
+            <Statistic title={t('dashboard.pendingBookings')} value={stats.pendingBookings}
+              prefix={<Clock className="text-amber-500 mr-2" size={18} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} className="shadow-sm border-l-4 border-purple-500">
-            <div className="flex justify-between items-start">
-              <Statistic
-                title={<span className="text-slate-500 font-medium">{t('dashboard.activeOperations')}</span>}
-                value={stats.activeOperations}
-                prefix={<Plane className="text-purple-500 mr-2" size={18} />}
-              />
-              <div className="text-xs text-slate-400 mt-2">{t('dashboard.departuresToday', '7 departures today')}</div>
-            </div>
+            <Statistic title={t('dashboard.activeOperations')} value={stats.activeOperations}
+              prefix={<Plane className="text-purple-500 mr-2" size={18} />} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} className="shadow-sm border-l-4 border-green-500">
-            <div className="flex justify-between items-start">
-              <Statistic
-                title={<span className="text-slate-500 font-medium">{t('dashboard.monthlyRevenue')}</span>}
-                value={stats.monthlyRevenue}
-                prefix={<Wallet className="text-green-500 mr-2" size={18} />}
-                precision={0}
-                suffix="¥"
-              />
-              <Tag color="success" className="m-0 flex items-center gap-1 border-none bg-green-50 text-green-600">
-                <ArrowUpRight size={12} /> {stats.revenueGrowth}%
-              </Tag>
-            </div>
+            <Statistic title={t('dashboard.monthlyRevenue')} value={stats.monthlyRevenue}
+              prefix={<Wallet className="text-green-500 mr-2" size={18} />} precision={0} suffix="¥" />
           </Card>
         </Col>
       </Row>
 
       <Row gutter={[20, 20]}>
         <Col xs={24} lg={16}>
-          <Card 
-            title={<div className="flex items-center gap-2"><TrendingUp size={18} /><span>{t('dashboard.weeklyVolume', 'Weekly Air Volume (Tons)')}</span></div>} 
-            className="shadow-sm"
-          >
+          <Card title={<div className="flex items-center gap-2"><TrendingUp size={18} /><span>{t('dashboard.overview')} — MAWB Status</span></div>} className="shadow-sm">
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                  />
+                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    {chartData.map((_entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 3 ? '#2563eb' : '#94a3b8'} />
+                    {chartData.map((_e, i) => (
+                      <Cell key={i} fill={['#f59e0b', '#3b82f6', '#22c55e', '#ef4444'][i]} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -157,34 +140,44 @@ export const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title={t('dashboard.warehouseCapacity', 'Warehouse Capacity')} className="shadow-sm">
-            <div className="space-y-6 py-2">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <Text className="font-medium">Main Hub - PVG</Text>
-                  <Text type="secondary">82%</Text>
-                </div>
-                <Progress percent={82} strokeColor="#2563eb" showInfo={false} />
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <Text className="font-medium">Secondary - CAN</Text>
-                  <Text type="secondary">45%</Text>
-                </div>
-                <Progress percent={45} strokeColor="#8b5cf6" showInfo={false} />
-              </div>
-              <div className="pt-4 border-t border-slate-100">
-                <Title level={5}>{t('dashboard.quickAlerts', 'Quick Alerts')}</Title>
-                <div className="space-y-3 mt-3">
-                  <div className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
-                      <AlertCircle size={16} />
-                    </div>
-                    <div>
-                      <Text className="block font-medium text-sm">{t('dashboard.creditOverflow', 'Credit Overflow: Huawei')}</Text>
-                      <Text type="secondary" className="text-[11px]">{t('dashboard.balanceLimitExceeded', 'Outstanding balance exceeds limit by ¥50k')}</Text>
-                    </div>
+          <Card title={t('dashboard.quickAlerts')} className="shadow-sm">
+            <div className="space-y-4">
+              {creditWarnings.length > 0 && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
+                  <AlertCircle size={18} className="text-red-500 mt-1" />
+                  <div>
+                    <Text strong className="text-red-700 text-xs uppercase">{t('dashboard.creditOverflow')}</Text>
+                    <ul className="mt-1 text-xs text-red-600">
+                      {creditWarnings.map((w, i) => (
+                        <li key={i}>{w.name}: {w.currency} {w.balance.toLocaleString()} / {w.limit}</li>
+                      ))}
+                    </ul>
                   </div>
+                </div>
+              )}
+              {mawbStats.exception > 0 && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
+                  <AlertCircle size={18} className="text-red-500 mt-1" />
+                  <div>
+                    <Text strong className="text-red-700">{t('operation.exception')}</Text>
+                    <Text className="text-red-600 text-sm block">{mawbStats.exception} shipments with exceptions</Text>
+                  </div>
+                </div>
+              )}
+              {stuckCount > 0 && (
+                <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg flex items-start gap-3">
+                  <Clock size={18} className="text-orange-500 mt-1" />
+                  <div>
+                    <Text strong className="text-orange-700">Delayed Operations</Text>
+                    <Text className="text-orange-600 text-sm block">{stuckCount} shipments stuck for 2h+</Text>
+                  </div>
+                </div>
+              )}
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3">
+                <CheckCircle size={18} className="text-blue-500 mt-1" />
+                <div>
+                  <Text strong className="text-blue-700">System Status</Text>
+                  <Text className="text-blue-600 text-sm block">All systems operational</Text>
                 </div>
               </div>
             </div>
@@ -193,42 +186,16 @@ export const Dashboard: React.FC = () => {
       </Row>
 
       <Card title={<div className="flex items-center gap-2"><CheckCircle size={18} /><span>{t('dashboard.recentActivities')}</span></div>} className="shadow-sm">
-        <Table
-          pagination={false}
-          loading={loading}
-          dataSource={recentOperations}
+        <Table pagination={false} loading={loading} dataSource={recentOperations}
           columns={[
-            { 
-              title: 'MAWB Reference', 
-              dataIndex: 'no', 
-              key: 'no',
-              render: (text) => <Text className="font-mono font-bold text-blue-600">{text}</Text>
-            },
-            { 
-              title: 'Route', 
-              dataIndex: 'flow', 
-              key: 'flow',
-              render: (text) => <Tag className="bg-slate-100 border-none px-3 font-medium text-slate-600">{text}</Tag>
-            },
-            { 
-              title: 'Status', 
-              dataIndex: 'status', 
-              key: 'status',
-              render: (status) => {
-                let color = 'blue';
-                if (status === 'Completed') color = 'green';
-                if (status === 'Draft') color = 'orange';
-                return <Badge status={color as any} text={status} className="font-medium" />;
-              }
-            },
-            { 
-              title: 'Last Update', 
-              dataIndex: 'date', 
-              key: 'date',
-              render: (text) => <Text type="secondary" className="text-xs">{text}</Text>
-            },
-          ]}
-        />
+            { title: 'MAWB', dataIndex: 'no', render: (t: string) => <Text className="font-mono font-bold text-blue-600">{t}</Text> },
+            { title: 'Route', dataIndex: 'flow', render: (t: string) => <Tag className="bg-slate-100 border-none">{t}</Tag> },
+            { title: t('common.status'), dataIndex: 'status', render: (s: string) => {
+                const colors: Record<string, string> = { Completed: 'green', Draft: 'orange' };
+                return <Badge status={(colors[s] || 'default') as any} text={s} />;
+            }},
+            { title: t('common.date'), dataIndex: 'date', render: (t: string) => <Text type="secondary" className="text-xs">{t}</Text> },
+          ]} />
       </Card>
     </div>
   );

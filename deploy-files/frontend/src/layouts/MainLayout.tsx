@@ -159,6 +159,13 @@ export const MainLayout: React.FC = () => {
             <Dropdown menu={{
               items: [
                 {
+                  key: 'profile',
+                  label: 'Profile',
+                  icon: <User size={16} />,
+                  onClick: () => navigate('/profile')
+                },
+                { type: 'divider' },
+                {
                   key: 'logout',
                   label: 'Logout',
                   icon: <LogOut size={16} />,

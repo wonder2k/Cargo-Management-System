@@ -62,6 +62,8 @@ export const operationApi = {
   getMawbs: (status?: string) => api.get(`/operation/mawbs${status ? `?status=${status}` : ''}`),
   createMawb: (data: any) => api.post('/operation/mawbs', data),
   updateMawb: (id: string | number, data: any) => api.post(`/operation/mawbs/${id}/status`, data),
+  createMawbFromBooking: (data: any) => api.post('/operation/mawbs/from-booking', data),
+  closeMawb: (id: string | number) => api.post(`/operation/mawbs/${id}/close`),
   getTracking: (mawbNo: string) => api.get(`/operation/tracking/${mawbNo}`),
   getStats: () => api.get('/operation/stats'),
 };
@@ -85,6 +87,17 @@ export const financeApi = {
 
   // Stats
   getStats: () => api.get('/finance/stats'),
+};
+
+// ====== File Upload ======
+export const uploadApi = {
+  uploadFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export default api;

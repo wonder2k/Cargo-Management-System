@@ -230,7 +230,12 @@ export const BookingList: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item name="declarationMethod" label="Declaration" rules={[{ required: true }]}>
-                <Select options={[{ label: 'Formal', value: 'formal' }, { label: '9610', value: '9610' }]} />
+                <Select options={[
+                  { label: 'Formal', value: 'formal' },
+                  { label: '9610', value: '9610' },
+                  { label: '9710', value: '9710' },
+                  { label: '9810', value: '9810' }
+                ]} />
               </Form.Item>
             </Col>
             <Col span={8}>

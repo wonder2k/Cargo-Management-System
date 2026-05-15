@@ -377,6 +377,47 @@ export const PricingList: React.FC = () => {
              <Col span={6}><Form.Item name="securityScreening" label="Security" initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
              <Col span={6}><Form.Item name="terminalHandling" label="Terminal" initialValue={0}><InputNumber className="w-full" /></Form.Item></Col>
           </Row>
+
+          <Title level={5} className="mb-2 mt-6 text-slate-700">{t('pricing.customs')}</Title>
+          <Row gutter={12}>
+            {['formal', '9610', '9710', '9810'].map((method) => (
+              <Col span={6} key={method}>
+                <Card size="small" title={method.toUpperCase()} className="bg-slate-50">
+                  <Form.Item label={t('common.amount')} name={['customsMethods', method, 'amount']} initialValue={0}>
+                    <InputNumber className="w-full" />
+                  </Form.Item>
+                  <Form.Item label={t('pricing.feeUnit')} name={['customsMethods', method, 'unit']} initialValue="per_shipment">
+                    <Select options={[{label: t('pricing.perKg'), value:'per_kg'}, {label: t('pricing.perShipment'), value:'per_shipment'}]} />
+                  </Form.Item>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          <Title level={5} className="mb-2 mt-6 text-slate-700">{t('pricing.other')}</Title>
+          <Form.List name="miscFees">
+            {(fields, { add, remove }) => (
+              <div className="space-y-4">
+                {fields.map(({ key, name, ...restField }) => (
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Form.Item {...restField} name={[name, 'name']} rules={[{ required: true, message: 'Fee Name required' }]}>
+                      <Input placeholder="Internal Handling, etc." />
+                    </Form.Item>
+                    <Form.Item {...restField} name={[name, 'amount']} rules={[{ required: true }]}>
+                      <InputNumber placeholder="Amount" />
+                    </Form.Item>
+                    <Form.Item {...restField} name={[name, 'unit']} initialValue="per_shipment">
+                      <Select style={{ width: 120 }} options={[{label: t('pricing.perKg'), value:'per_kg'}, {label: t('pricing.perShipment'), value:'per_shipment'}]} />
+                    </Form.Item>
+                    <Trash2 size={16} className="text-red-500 cursor-pointer" onClick={() => remove(name)} />
+                  </Space>
+                ))}
+                <Button type="dashed" onClick={() => add()} block icon={<Plus size={14} />}>
+                  {t('common.add')} Misc Charge
+                </Button>
+              </div>
+            )}
+          </Form.List>
         </Form>
       </Modal>
 
@@ -393,11 +434,16 @@ export const PricingList: React.FC = () => {
             </Form.Item>
           ) : (
             <Form.Item name="customerId" label="Select Customer" rules={[{ required: true }]}>
-              <Select options={customers.map(c => ({ label: c.name, value: c.id }))} />
+              <Select
+                showSearch
+                placeholder="Search customer by name or code..."
+                optionFilterProp="label"
+                options={customers.map(c => ({ label: `${c.code} - ${c.name}`, value: c.id }))}
+              />
             </Form.Item>
           )}
           <Form.Item name="recipientInfo" label="Recipient Info">
-             <Input.TextArea rows={3} />
+             <Input.TextArea rows={3} placeholder="Contact Person, Phone..." />
           </Form.Item>
           <Form.Item name="validUntil" label="Valid Until" initialValue={new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]}>
              <Input type="date" />
@@ -406,34 +452,64 @@ export const PricingList: React.FC = () => {
       </Modal>
 
       <Modal
-        title="Quotation Preview"
+        title={
+          <div className="flex items-center gap-2">
+            <TrendingUp size={20} className="text-blue-500" />
+            <span>{t('pricing.preview') || 'Quotation Preview'}</span>
+          </div>
+        }
         open={previewModalOpen}
         onCancel={() => setPreviewModalOpen(false)}
         onOk={handleFinalConfirm}
+        okText={t('pricing.confirmDownload') || 'Confirm & Download'}
         width={750}
       >
         {pendingQuotation && (
           <div className="space-y-4">
              <div className="flex justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <div>
-                   <Text type="secondary" className="block text-[10px] font-bold">Proposal For</Text>
+                   <Text type="secondary" className="block text-[10px] uppercase font-bold tracking-wider">{t('pricing.proposalFor') || 'Proposal For'}</Text>
                    <Text strong className="text-lg">{pendingQuotation.customerName}</Text>
+                   <div className="mt-1">
+                      <Text type="secondary" className="block whitespace-pre-wrap">{pendingQuotation.recipientInfo}</Text>
+                   </div>
                 </div>
                 <div className="text-right">
-                   <Text strong className="text-blue-600 font-mono">{pendingQuotation.quotationNo}</Text>
+                   <Text type="secondary" className="block text-[10px] uppercase font-bold tracking-wider">{t('quotes.quoteNo') || 'Quote No'}</Text>
+                   <Text strong className="text-blue-600 font-mono italic">{pendingQuotation.quotationNo}</Text>
+                   <div className="mt-2 text-[11px] text-slate-500">
+                      {t('pricing.validUntil') || 'Valid Until'}: {pendingQuotation.validUntil}
+                   </div>
                 </div>
              </div>
-             <Table 
+
+             <Table
                 dataSource={pendingQuotation.routes}
                 rowKey="id"
                 pagination={false}
+                size="small"
                 columns={[
-                  { title: t('common.origin'), dataIndex: 'origin' },
-                  { title: t('common.destination'), dataIndex: 'destination' },
+                  { title: t('common.origin'), dataIndex: 'origin', className: 'font-mono' },
+                  { title: t('common.destination'), dataIndex: 'destination', className: 'font-mono' },
                   { title: t('common.carrier'), dataIndex: 'carrier', className: 'font-bold' },
-                  { title: 'Final Price', render: (_, r: any) => <Text strong className="text-blue-600">{pendingQuotation.currency} {r.finalPrice.toFixed(2)}</Text> }
+                  { title: t('pricing.baseFreight') || 'Base Price', dataIndex: 'basePrice', render: (v: number) => `${pendingQuotation.currency} ${v}` },
+                  {
+                    title: t('pricing.finalPrice') || 'Final Price',
+                    render: (_, r: any) => (
+                      <Text strong className="text-blue-600">
+                        {pendingQuotation.currency} {r.finalPrice.toFixed(2)}
+                      </Text>
+                    )
+                  }
                 ]}
              />
+
+             <div className="bg-blue-50 p-3 rounded border border-blue-100 flex items-start gap-2">
+                <Settings size={16} className="text-blue-400 mt-1" />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('pricing.pdfNote') || 'Your company logo and contact details will be embedded in the final PDF.'}
+                </Text>
+             </div>
           </div>
         )}
       </Modal>

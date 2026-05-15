@@ -61,6 +61,7 @@ const resources = {
         mawbId: "MAWB ID",
         markPaid: "Mark Paid",
         manageClients: "Manage your business clients",
+        accessDenied: "Access denied. Admin only.",
         updated: "Updated successfully",
         added: "Added successfully",
         error: "Operation failed",
@@ -120,7 +121,16 @@ const resources = {
         quote: "Quote",
         batchQuote: "Batch Quote",
         customsMethod: "Customs Method",
-        miscFees: "Misc Fees"
+        miscFees: "Misc Fees",
+        feeUnit: "Billing Unit",
+        perKg: "Per KG",
+        perShipment: "Per Shipment",
+        preview: "Quotation Preview",
+        confirmDownload: "Confirm & Download",
+        proposalFor: "Proposal For",
+        pdfNote: "Your company logo and contact details will be embedded in the final PDF.",
+        other: "Other Charges",
+        customs: "Customs Declaration"
       },
       quotes: {
         title: "Quotation History",
@@ -159,7 +169,24 @@ const resources = {
         whseEntryConfirmed: "Whse Entry Confirmed",
         setTerminalIn: "Terminal In",
         exception: "Exception",
-        financeSettlement: "Finance Settlement"
+        financeSettlement: "Finance Settlement",
+        activeShipments: "Active Shipments",
+        newRequests: "New Requests",
+        finishedRequests: "Finished Requests",
+        mawbRef: "MAWB Ref",
+        grossWeight: "Gross Weight",
+        chargeableWeight: "Chargeable Weight",
+        dimensions: "Dimensions",
+        addDim: "Add Dimension",
+        setConfirmed: "Confirm Space",
+        uploadDraftDesc: "Upload the draft MAWB PDF for customer confirmation",
+        steps: {
+          warehouse: "Warehouse Entry",
+          draft: "MAWB Draft",
+          customs: "Customs",
+          terminal: "Terminal In",
+          tracking: "Depart / Arrive"
+        }
       },
       finance: {
         title: "Financial Settlement",
@@ -167,6 +194,9 @@ const resources = {
         invoiceSubtitle: "Financial management and reporting",
         ar: "Account Receivable",
         ap: "Account Payable",
+        accountsReceivable: "Accounts Receivable",
+        accountsPayable: "Accounts Payable",
+        profitAnalysis: "Profit Analysis",
         invoiceNo: "Invoice No",
         dueDate: "Due Date",
         outstanding: "Outstanding",
@@ -177,7 +207,43 @@ const resources = {
         totalAR: "Total AR",
         totalAP: "Total AP",
         netProfit: "Net Profit",
-        createInvoice: "Create Manual Invoice"
+        createInvoice: "Create Manual Invoice",
+        mawb: "MAWB",
+        customer: "Customer",
+        amount: "Amount",
+        status: "Status",
+        flightDate: "Flight Date",
+        revenue: "Revenue",
+        cost: "Cost",
+        newInvoice: "New Invoice",
+        paid: "Mark Paid",
+        statuses: {
+          pending: "Pending",
+          paid: "Paid",
+          invoiced: "Invoiced",
+          issued: "Issued"
+        }
+      },
+      profile: {
+        title: "Personal Center",
+        subtitle: "Manage your profile and preferences",
+        settings: "Profile Settings",
+        settingsDesc: "Update your personal information and company details",
+        name: "Name",
+        email: "Email",
+        companyName: "Company Name",
+        contactPerson: "Contact Person",
+        phoneNumber: "Phone Number",
+        logo: "Company Logo",
+        logoDesc: "Enter a URL for your company logo (1:1 ratio recommended)",
+        save: "Save Changes",
+        regionalAccess: "Regional Access",
+        noRegions: "No regions assigned",
+        warehousePresets: "Warehouse Presets",
+        addWarehouse: "Add Warehouse",
+        warehouseName: "Warehouse Name",
+        address: "Address",
+        contact: "Contact"
       },
       booking: {
         status: {
@@ -257,6 +323,7 @@ const resources = {
         mawbId: "主单编号",
         markPaid: "标记已付",
         manageClients: "管理您的业务客户",
+        accessDenied: "无权限访问，仅限管理员",
         updated: "更新成功",
         added: "新增成功",
         error: "操作失败",
@@ -316,7 +383,16 @@ const resources = {
         quote: "报价",
         batchQuote: "批量报价",
         customsMethod: "报关方式",
-        miscFees: "杂费"
+        miscFees: "杂费",
+        feeUnit: "计费单位",
+        perKg: "按公斤",
+        perShipment: "按票",
+        preview: "报价预览",
+        confirmDownload: "确认并下载",
+        proposalFor: "报价对象",
+        pdfNote: "您的公司Logo和联系方式将自动嵌入PDF中。",
+        other: "其他费用",
+        customs: "报关方式"
       },
       quotes: {
         title: "报价单记录",
@@ -355,7 +431,24 @@ const resources = {
         whseEntryConfirmed: "入库确认",
         setTerminalIn: "分拨理货",
         exception: "异常",
-        financeSettlement: "财务结算"
+        financeSettlement: "财务结算",
+        activeShipments: "进行中空运",
+        newRequests: "新订舱请求",
+        finishedRequests: "已完成运单",
+        mawbRef: "主单编号",
+        grossWeight: "毛重",
+        chargeableWeight: "计费重量",
+        dimensions: "尺寸",
+        addDim: "新增尺寸",
+        setConfirmed: "确认舱位",
+        uploadDraftDesc: "上传主单草稿PDF供客户确认",
+        steps: {
+          warehouse: "入库操作",
+          draft: "主单草单",
+          customs: "报关",
+          terminal: "分拨理货",
+          tracking: "起飞/到达"
+        }
       },
       finance: {
         title: "结算中心",
@@ -363,6 +456,9 @@ const resources = {
         invoiceSubtitle: "财务管理与报表",
         ar: "应收管理",
         ap: "应付管理",
+        accountsReceivable: "应收账款",
+        accountsPayable: "应付账款",
+        profitAnalysis: "利润分析",
         invoiceNo: "账单号",
         dueDate: "到期日期",
         outstanding: "未结金额",
@@ -373,7 +469,43 @@ const resources = {
         totalAR: "应收合计",
         totalAP: "应付合计",
         netProfit: "净利润",
-        createInvoice: "创建发票"
+        createInvoice: "创建发票",
+        mawb: "主单",
+        customer: "客户",
+        amount: "金额",
+        status: "状态",
+        flightDate: "航班日期",
+        revenue: "收入",
+        cost: "成本",
+        newInvoice: "新发票",
+        paid: "标记已付",
+        statuses: {
+          pending: "待处理",
+          paid: "已付",
+          invoiced: "已开票",
+          issued: "已发出"
+        }
+      },
+      profile: {
+        title: "个人中心",
+        subtitle: "管理您的个人资料和偏好设置",
+        settings: "个人设置",
+        settingsDesc: "更新您的个人信息和公司资料",
+        name: "姓名",
+        email: "邮箱",
+        companyName: "公司名称",
+        contactPerson: "联系人",
+        phoneNumber: "联系电话",
+        logo: "公司Logo",
+        logoDesc: "输入公司Logo的URL地址（建议1:1比例）",
+        save: "保存修改",
+        regionalAccess: "区域权限",
+        noRegions: "未分配区域",
+        warehousePresets: "仓库预设",
+        addWarehouse: "新增仓库",
+        warehouseName: "仓库名称",
+        address: "地址",
+        contact: "联系方式"
       },
       booking: {
         status: {

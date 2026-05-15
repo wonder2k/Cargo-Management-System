@@ -13,6 +13,7 @@ import { BusinessModule } from './modules/Business';
 import { OperationModule } from './modules/Operation';
 import { FinanceModule } from './modules/Finance';
 import { UserManagement } from './modules/Admin/UserManagement';
+import { PersonalCenter } from './modules/Profile/PersonalCenter';
 
 // Language toggle button used on login/register pages
 const LangToggle = () => {
@@ -350,6 +351,7 @@ const App: React.FC = () => {
                 <Route path="operation" element={<OperationModule />} />
                 <Route path="finance" element={<FinanceModule />} />
                 <Route path="users" element={<UserManagement />} />
+                <Route path="profile" element={<PersonalCenter />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
