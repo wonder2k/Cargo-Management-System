@@ -166,14 +166,13 @@ export const PDFService = {
   printQuote: (quotation: any, customer: any, profile: any, lang: 'en' | 'zh' = 'en') => {
     const isZH = lang === 'zh';
 
-    // Logo: use absolute URL + inline SVG fallback
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const avatarPath = profile?.avatarUrl || '';
-    const logoAbsUrl = avatarPath.startsWith('/') ? baseUrl + avatarPath : avatarPath;
-    const logoHtml = logoAbsUrl
-      ? `<img src="${logoAbsUrl}" style="max-height:48px;max-width:160px;object-fit:contain;"
-          onerror="this.outerHTML='<div style=\\'font-size:18px;font-weight:700;color:#1e3a5f;\\'>JCargo</div>'" />`
+    // Logo — same-origin approach (uses current page context, not a popup)
+    const avatarUrl = (profile as any)?.avatarUrl || '';
+    const logoHtml = avatarUrl
+      ? `<img src="${avatarUrl}" style="max-height:48px;max-width:160px;object-fit:contain;" />  <div style="font-size:18px;font-weight:700;color:#1e3a5f;display:none" class="logo-fallback">JCargo</div>`
       : '<div style="font-size:18px;font-weight:700;color:#1e3a5f;">JCargo</div>';
+
+    const fx = (v: any) => (Number(v) || 0).toFixed(2);
 
     const routeRows = quotation.routes.map((r: any) => {
       const freightVal = Number(r.finalPrice) || 0;
@@ -181,36 +180,31 @@ export const PDFService = {
       const secVal = Number(r.security) || 0;
       const termVal = Number(r.terminal) || 0;
       const miskKgSum = (r.miscFees || []).reduce((s: number, m: any) => m.unit === 'per_kg' ? s + (Number(m.amount) || 0) : s, 0);
-      const freightPart = freightVal - fuelVal - secVal - termVal - miskKgSum;
-      const perKgTotal = Math.max(freightPart, 0) + fuelVal + secVal + termVal + miskKgSum;
+      const freightPart = Math.max(freightVal - fuelVal - secVal - termVal - miskKgSum, 0);
+      const perKgTotal = freightPart + fuelVal + secVal + termVal + miskKgSum;
       const flatTotal = r.flatFees || 0;
 
-      // Left column: base charges (per-KG)
-      const leftItems: string[] = [];
       const row = (label: string, val: number) =>
         `<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;line-height:1.7">
           <span style="color:#475569">${label}</span>
-          <span style="font-family:monospace;font-weight:600;text-align:right">${val.toFixed(2)}</span>
+          <span style="font-family:monospace;font-weight:600;text-align:right">${fx(val)}</span>
         </div>`;
-      leftItems.push(row(isZH ? '运费' : 'Freight', freightPart));
-      if (fuelVal > 0) leftItems.push(row(isZH ? '燃油附加' : 'Fuel', fuelVal));
-      if (secVal > 0) leftItems.push(row(isZH ? '安检费' : 'Security', secVal));
-      if (termVal > 0) leftItems.push(row(isZH ? '地勤费' : 'Terminal', termVal));
-      if (miskKgSum > 0) leftItems.push(row(isZH ? '杂费(KG)' : 'Misc(KG)', miskKgSum));
 
-      // Right column: customs methods (per-route)
-      const customsMap = r.customsMethods || {};
-      const allMethods = ['formal', '9610', '9710', '9810'];
-      const rightItems: string[] = [];
-      rightItems.push(`<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">${isZH ? '报关费(按需选一)' : 'Customs (select one)'}</div>`);
-      allMethods.forEach(k => {
-        const m = customsMap[k];
+      const left: string[] = [ row(isZH ? '运费' : 'Freight', freightPart) ];
+      if (fuelVal > 0) left.push(row(isZH ? '燃油附加' : 'Fuel', fuelVal));
+      if (secVal > 0) left.push(row(isZH ? '安检费' : 'Security', secVal));
+      if (termVal > 0) left.push(row(isZH ? '地勤费' : 'Terminal', termVal));
+      if (miskKgSum > 0) left.push(row(isZH ? '杂费(KG)' : 'Misc(KG)', miskKgSum));
+
+      const cMap = r.customsMethods || {};
+      const right: string[] = [ `<div style="font-size:9px;font-weight:700;color:#64748b;margin-bottom:2px">${isZH ? '报关费(按需选一)' : 'Customs (select one)'}</div>` ];
+      ['formal', '9610', '9710', '9810'].forEach(k => {
+        const m = cMap[k];
         if (m && Number(m.amount) > 0) {
-          const unitLabel = m.unit === 'per_kg' ? '/KG' : '/Ship';
-          rightItems.push(
+          right.push(
             `<div style="display:flex;justify-content:space-between;gap:8px;font-size:9px;line-height:1.6">
               <span style="font-weight:600;color:#1e293b">${k.toUpperCase()}</span>
-              <span style="font-family:monospace;text-align:right">${quotation.currency} ${Number(m.amount).toFixed(2)} ${unitLabel}</span>
+              <span style="font-family:monospace;text-align:right">${quotation.currency} ${fx(m.amount)} ${m.unit === 'per_kg' ? '/KG' : '/Ship'}</span>
             </div>`
           );
         }
@@ -222,14 +216,14 @@ export const PDFService = {
         <td style="padding:7px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:12px;text-align:center">${r.carrier}</td>
         <td style="padding:7px 8px;border:1px solid #e2e8f0;font-size:0">
           <div style="display:flex;">
-            <div style="flex:1;padding-right:6px;">${leftItems.join('')}</div>
+            <div style="flex:1;padding-right:6px">${left.join('')}</div>
             <div style="width:1px;background:#e2e8f0;margin:2px 0"></div>
-            <div style="flex:1;padding-left:6px;">${rightItems.join('')}</div>
+            <div style="flex:1;padding-left:6px">${right.join('')}</div>
           </div>
         </td>
         <td style="padding:7px 8px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#2563eb;font-size:13px">
-          ${quotation.currency} ${perKgTotal.toFixed(2)}<span style="font-size:10px;font-weight:400;color:#64748b"> /KG</span>
-          ${flatTotal > 0 ? `<br/><span style="font-size:10px;color:#d97706">+ ${quotation.currency} ${flatTotal.toFixed(2)}<span style="font-weight:400"> /Shipment</span></span>` : ''}
+          ${quotation.currency} ${fx(perKgTotal)}<span style="font-size:10px;font-weight:400;color:#64748b"> /KG</span>
+          ${flatTotal > 0 ? `<br/><span style="font-size:10px;color:#d97706">+ ${quotation.currency} ${fx(flatTotal)}<span style="font-weight:400"> /Shipment</span></span>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -239,9 +233,10 @@ export const PDFService = {
       : ['Rates are subject to space availability at time of booking.', 'Volumetric calculations apply (1:6000 ratio).',
          'Rates valid for general cargo only unless specified.', 'Final charges based on actual weight/dim as per carrier SLI.'];
 
-    // Calculate totals
+    // Calculate totals (use fx for float precision)
     const totalKg = quotation.routes.reduce((s: number, r: any) => s + (Number(r.finalPrice) || 0), 0);
     const totalFlat = quotation.routes.reduce((s: number, r: any) => s + (Number(r.flatFees) || 0), 0);
+    const avgRate = totalKg / (quotation.routes.length || 1);
 
     const html = `<!DOCTYPE html>
 <html lang="${lang}">
@@ -281,7 +276,21 @@ export const PDFService = {
   .terms-box .item { font-size: 9px; color: #94a3b8; margin: 2px 0; padding-left: 10px; }
 
   .footer-line { text-align: center; font-size: 9px; color: #cbd5e1; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-</style></head>
+  @media print { body { margin: 0; padding: 0; } .no-print { display: none !important; } }
+  img[src=""], img:not([src]) { display: none; }
+  img[src] + .logo-fallback { display: none; }
+  img[src]:not([src=""]) + .logo-fallback { display: none; }
+</style>
+<script>
+  // Logo fallback — hide img on error, show text
+  document.addEventListener('DOMContentLoaded', function() {
+    var imgs = document.querySelectorAll('.logo-area img');
+    imgs.forEach(function(img) {
+      img.onerror = function() { this.style.display = 'none'; var fb = this.nextElementSibling; if(fb) fb.style.display = ''; };
+    });
+  });
+</script>
+</head>
 <body>
 
   <!-- Header -->
@@ -310,9 +319,13 @@ export const PDFService = {
       <div class="value-sm" style="white-space:pre-wrap">${quotation.recipientInfo || ''}</div>
     </div>
     <div class="col" style="text-align:right">
-      <div class="label">${isZH ? '有效期至' : 'VALID UNTIL'}</div>
-      <div class="num">${quotation.validUntil}</div>
-      <div class="value-sm">${isZH ? '币种' : 'Currency'}: ${quotation.currency}</div>
+      <div class="label">${isZH ? '日期' : 'DATE'}</div>
+      <div class="num" style="font-size:12px">${dayjs().format('YYYY-MM-DD')}</div>
+      <div style="margin-top:4px">
+        <div class="label">${isZH ? '有效期至' : 'VALID UNTIL'}</div>
+        <div class="num" style="font-size:12px">${quotation.validUntil}</div>
+      </div>
+      <div class="value-sm" style="margin-top:4px">${isZH ? '币种' : 'Currency'}: ${quotation.currency}</div>
     </div>
   </div>
 
@@ -336,7 +349,7 @@ export const PDFService = {
     </div>
     <div class="item">
       <div class="lbl">${isZH ? '平均运价/KG' : 'Avg Rate/KG'}</div>
-      <div class="val">${quotation.currency} ${(totalKg / (quotation.routes.length || 1)).toFixed(2)}</div>
+      <div class="val">${quotation.currency} ${fx(avgRate)}</div>
     </div>
     ${totalFlat > 0 ? `
     <div class="item">
@@ -355,13 +368,21 @@ export const PDFService = {
 
 </body></html>`;
 
-    // Open in new window for print
-    const win = window.open('', '_blank');
-    if (!win) { /* popup blocked */ return; }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 500);
+    // Same-window print — same origin so relative image URLs work
+    const printDiv = document.createElement('div');
+    printDiv.innerHTML = html;
+    printDiv.id = 'jcargo-print-container';
+    printDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;z-index:99999;background:#fff;';
+    document.body.appendChild(printDiv);
+
+    const cleanup = () => {
+      const el = document.getElementById('jcargo-print-container');
+      if (el) el.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(cleanup, 30000);
+    setTimeout(() => { window.print(); }, 300);
   },
 
   generateInvoice: (invoice: any, customer: any, mawb?: any) => {
