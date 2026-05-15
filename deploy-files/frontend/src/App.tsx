@@ -12,6 +12,21 @@ import { Dashboard } from './modules/Dashboard';
 import { BusinessModule } from './modules/Business';
 import { OperationModule } from './modules/Operation';
 import { FinanceModule } from './modules/Finance';
+import { UserManagement } from './modules/Admin/UserManagement';
+
+// Language toggle button used on login/register pages
+const LangToggle = () => {
+  const { i18n } = useTranslation();
+  const next = i18n.language?.startsWith('zh') ? 'en' : 'zh';
+  return (
+    <button
+      onClick={() => i18n.changeLanguage(next)}
+      className="absolute top-4 right-4 text-xs text-slate-400 hover:text-white bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50 transition"
+    >
+      {next === 'zh' ? '中文' : 'English'}
+    </button>
+  );
+};
 
 const LoginPage = () => {
   const { login, demoLogin, user } = useAuth();
@@ -54,14 +69,15 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative">
+      <LangToggle />
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>
           </div>
           <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">JCargo CMS</h2>
-          <p className="text-slate-500 text-center mb-8 text-sm">Professional Air Cargo Management System</p>
+          <p className="text-slate-500 text-center mb-8 text-sm">{t('dashboard.overviewSubtitle')}</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
@@ -71,7 +87,7 @@ const LoginPage = () => {
 
           <form className="space-y-4" onSubmit={handleLogin}>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.email') || 'Email Address'}</label>
               <input
                 type="email"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -82,7 +98,7 @@ const LoginPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Password</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.password') || 'Password'}</label>
               <input
                 type="password"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -97,13 +113,13 @@ const LoginPage = () => {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
             >
-              {loading ? 'Authenticating...' : 'Sign In'}
+              {loading ? t('common.process_login') || 'Authenticating...' : t('common.login') || 'Sign In'}
             </button>
           </form>
 
           <div className="mt-4 text-center">
             <Link to="/register" className="text-blue-600 text-sm hover:text-blue-800">
-              Don't have an account? Register here
+              {t('common.register') || "Don't have an account? Register here"}
             </Link>
           </div>
 
@@ -113,7 +129,7 @@ const LoginPage = () => {
               className="w-full border border-slate-200 text-slate-600 py-3 rounded-lg font-medium hover:bg-slate-50 transition flex items-center justify-center gap-2"
             >
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Enter with Demo Account
+              {t('common.demo') || 'Enter with Demo Account'}
             </button>
           </div>
         </div>
@@ -177,14 +193,15 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative">
+      <LangToggle />
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">JC</div>
           </div>
-          <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">Create Account</h2>
-          <p className="text-slate-500 text-center mb-8 text-sm">Join JCargo Cargo Management System</p>
+          <h2 className="text-3xl font-bold text-slate-800 text-center mb-2">{t('common.register_title') || 'Create Account'}</h2>
+          <p className="text-slate-500 text-center mb-8 text-sm">{t('common.register_subtitle') || 'Join JCargo Cargo Management System'}</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">{error}</div>
@@ -195,7 +212,7 @@ const RegisterPage = () => {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Full Name</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.name') || 'Full Name'}</label>
               <input
                 type="text"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -205,7 +222,7 @@ const RegisterPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email *</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.email') || 'Email'} *</label>
               <input
                 type="email"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -216,7 +233,7 @@ const RegisterPage = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Company</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.company') || 'Company'}</label>
               <input
                 type="text"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -227,7 +244,7 @@ const RegisterPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Password *</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.password') || 'Password'} *</label>
                 <input
                   type="password"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -238,7 +255,7 @@ const RegisterPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Confirm *</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.confirmPassword') || 'Confirm'} *</label>
                 <input
                   type="password"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -250,7 +267,7 @@ const RegisterPage = () => {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Phone</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('common.phone') || 'Phone'}</label>
               <input
                 type="tel"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
@@ -264,13 +281,13 @@ const RegisterPage = () => {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? t('common.process_register') || 'Creating Account...' : t('common.register') || 'Create Account'}
             </button>
           </form>
 
           <div className="mt-4 text-center">
             <Link to="/login" className="text-blue-600 text-sm hover:text-blue-800">
-              Already have an account? Sign in
+              {t('common.login_link') || 'Already have an account? Sign in'}
             </Link>
           </div>
         </div>
@@ -330,7 +347,7 @@ const App: React.FC = () => {
                 <Route path="customers" element={<BusinessModule />} />
                 <Route path="operation" element={<OperationModule />} />
                 <Route path="finance" element={<FinanceModule />} />
-                <Route path="users" element={<Dashboard />} />
+                <Route path="users" element={<UserManagement />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

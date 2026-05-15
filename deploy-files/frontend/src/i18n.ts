@@ -17,6 +17,19 @@ const resources = {
         profile: "Profile",
         settings: "Settings",
         logout: "Logout",
+        login: "Sign In",
+        register: "Create Account",
+        demo: "Enter with Demo Account",
+        process_login: "Authenticating...",
+        process_register: "Creating Account...",
+        register_title: "Create Account",
+        register_subtitle: "Join JCargo Cargo Management System",
+        login_link: "Already have an account? Sign in",
+        email: "Email Address",
+        password: "Password",
+        confirmPassword: "Confirm Password",
+        company: "Company",
+        phone: "Phone",
         search: "Search",
         add: "Add",
         edit: "Edit",
@@ -34,7 +47,16 @@ const resources = {
         origin: "Origin",
         destination: "Destination",
         remarks: "Remarks",
-        all: "All"
+        all: "All",
+        code: "Code",
+        name: "Name",
+        type: "Type",
+        manageClients: "Manage your business clients",
+        updated: "Updated successfully",
+        added: "Added successfully",
+        error: "Operation failed",
+        success: "Operation successful",
+        failedToFetch: "Failed to fetch data"
       },
       menu: {
         dashboard: "Dashboard",
@@ -132,6 +154,30 @@ const resources = {
         dueDate: "Due Date",
         outstanding: "Outstanding",
         profit: "Profit Analysis"
+      },
+      booking: {
+        status: {
+          pending: "Pending",
+          prebooked: "Pre-booked",
+          booked: "Booked",
+          space_confirmed: "Space Confirmed",
+          partial: "Space Partial",
+          space_rejected: "Space Rejected",
+          warehouse_in: "Warehouse In",
+          customs: "Customs",
+          departed: "Departed",
+          arrived: "Arrived",
+          closed: "Closed",
+          on_hold: "On Hold",
+          client_accepted: "Client Accepted",
+          finalized: "Finalized"
+        }
+      },
+      operation: {
+        whseEntryConfirmed: "Whse Entry Confirmed",
+        setTerminalIn: "Terminal In",
+        exception: "Exception",
+        financeSettlement: "Finance Settlement"
       }
     }
   },
@@ -149,6 +195,19 @@ const resources = {
         profile: "个人中心",
         settings: "系统设置",
         logout: "退出登录",
+        login: "登录",
+        register: "注册账号",
+        demo: "使用Demo账户进入",
+        process_login: "登录中...",
+        process_register: "注册中...",
+        register_title: "创建账号",
+        register_subtitle: "加入JCargo货物管理系统",
+        login_link: "已有账号？立即登录",
+        email: "邮箱地址",
+        password: "密码",
+        confirmPassword: "确认密码",
+        company: "公司名称",
+        phone: "电话",
         search: "搜索",
         add: "新增",
         edit: "编辑",
@@ -166,7 +225,16 @@ const resources = {
         origin: "始发站",
         destination: "目的站",
         remarks: "备注",
-        all: "全部"
+        all: "全部",
+        code: "客户代码",
+        name: "客户名称",
+        type: "客户类型",
+        manageClients: "管理您的业务客户",
+        updated: "更新成功",
+        added: "新增成功",
+        error: "操作失败",
+        success: "操作成功",
+        failedToFetch: "获取数据失败"
       },
       menu: {
         dashboard: "工作台",
@@ -264,6 +332,30 @@ const resources = {
         dueDate: "到期日期",
         outstanding: "未结金额",
         profit: "利润分析"
+      },
+      booking: {
+        status: {
+          pending: "待处理",
+          prebooked: "预订",
+          booked: "已订舱",
+          space_confirmed: "舱位确认",
+          partial: "部分舱位",
+          space_rejected: "舱位拒绝",
+          warehouse_in: "已入库",
+          customs: "报关中",
+          departed: "已起飞",
+          arrived: "已到达",
+          closed: "已关闭",
+          on_hold: "暂挂",
+          client_accepted: "客户已确认",
+          finalized: "已完成"
+        }
+      },
+      operation: {
+        whseEntryConfirmed: "入库确认",
+        setTerminalIn: "分拨理货",
+        exception: "异常",
+        financeSettlement: "财务结算"
       }
     }
   }
