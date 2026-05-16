@@ -41,6 +41,7 @@ export const BookingList: React.FC = () => {
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<Booking | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [rateSchedule, setRateSchedule] = useState('');
   const { user: profile } = useAuth();
   const { t } = useTranslation();
   const [form] = Form.useForm();
@@ -138,7 +139,13 @@ export const BookingList: React.FC = () => {
           type="primary" 
           size="large" 
           icon={<FilePlus size={18} />} 
-          onClick={() => setNewModalOpen(true)}
+          onClick={async () => {
+            try {
+              const [custRes, rateRes] = await Promise.all([businessApi.getCustomers(), businessApi.getRates()]);
+              setCustomers(custRes.data); setRates(rateRes.data);
+            } catch {}
+            setNewModalOpen(true);
+          }}
         >
           {t('common.add')}
         </Button>
@@ -218,20 +225,31 @@ export const BookingList: React.FC = () => {
              </Col>
              <Col span={12}>
                <Form.Item name="rateId" label={t('common.route')||'Route'} rules={[{ required: true }]}>
-                 <Select options={rates.map(r => ({ label: `[${r.carrier}] ${r.origin}→${r.destination}`, value: r.id }))} />
+                 <Select options={rates.map(r => ({ label: `[${r.carrier}] ${r.origin}→${r.destination}`, value: r.id }))}
+                   onChange={(id) => {
+                     const r = rates.find(x => x.id === id);
+                     setRateSchedule(r?.schedule || '');
+                   }} />
                </Form.Item>
              </Col>
           </Row>
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="flightDate" label={t('common.flightDate')||'Flight Date'} rules={[{ required: true }]}>
-                <DatePicker className="w-full" />
+                <DatePicker className="w-full"
+                  disabledDate={(current) => {
+                    if (!rateSchedule || !current) return false;
+                    const dow = current.day(); // 0=Sun, 1=Mon...
+                    const schedDays = rateSchedule.split(',').map(Number);
+                    const jsDay = dow === 0 ? 7 : dow; // convert Sun=0 → Sun=7
+                    return !schedDays.includes(jsDay);
+                  }} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="declarationMethod" label={t('common.declaration')||'Declaration'} rules={[{ required: true }]}>
                 <Select options={[
-                  { label: 'Formal', value: 'formal' },
+                  { label: t('bookings.declarationMethods.formal')||'Formal', value: 'formal' },
                   { label: '9610', value: '9610' },
                   { label: '9710', value: '9710' },
                   { label: '9810', value: '9810' }

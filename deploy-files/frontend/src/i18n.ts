@@ -170,7 +170,9 @@ const resources = {
         pdfNote: "Your company logo and contact details will be embedded in the final PDF.",
         other: "Other Charges",
         customs: "Customs Declaration",
-        adjustment: "Adjustment"
+        adjustment: "Adjustment",
+        scheduleHint: "Select flight days",
+        mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun"
       },
       quotes: {
         title: "Quotation History",
@@ -189,7 +191,13 @@ const resources = {
         flightDate: "Flight Date",
         goodsDesc: "Goods Description",
         declaration: "Declaration",
-        details: "Details"
+        details: "Details",
+        declarationMethods: {
+          formal: "Formal",
+          "9610": "9610",
+          "9710": "9710",
+          "9810": "9810"
+        }
       },
       operation: {
         title: "MAWB Operations",
@@ -472,7 +480,9 @@ const resources = {
         pdfNote: "您的公司Logo和联系方式将自动嵌入PDF中。",
         other: "其他费用",
         customs: "报关方式",
-        adjustment: "价格调整"
+        adjustment: "价格调整",
+        scheduleHint: "选择航班日",
+        mon: "周一", tue: "周二", wed: "周三", thu: "周四", fri: "周五", sat: "周六", sun: "周日"
       },
       quotes: {
         title: "报价单记录",
@@ -491,7 +501,13 @@ const resources = {
         flightDate: "航班日期",
         goodsDesc: "货物描述",
         declaration: "报关方式",
-        details: "详情"
+        details: "详情",
+        declarationMethods: {
+          formal: "正式报关",
+          "9610": "9610 跨境电商",
+          "9710": "9710 跨境电商B2B",
+          "9810": "9810 跨境电商海外仓"
+        }
       },
       operation: {
         title: "空运操作中心",

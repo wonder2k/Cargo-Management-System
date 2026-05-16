@@ -229,7 +229,7 @@ export const PricingList: React.FC = () => {
             disabled={selectedRateIds.length === 0}
             size="large"
             icon={<FileText size={18} />}
-            onClick={() => setQuoteModalOpen(true)}
+            onClick={async () => { try { const res = await businessApi.getCustomers(); setCustomers(res.data); } catch {} setQuoteModalOpen(true); }}
             className={selectedRateIds.length > 0 ? "bg-orange-500 border-orange-500 hover:bg-orange-600" : ""}
           >
             {t('pricing.quote')} ({selectedRateIds.length})
@@ -407,7 +407,18 @@ export const PricingList: React.FC = () => {
           <Row gutter={16}>
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'}><Input /></Form.Item></Col>
+             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'} getValueFromEvent={(val) => val.join(',')} getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
+               <Select mode="multiple" placeholder={t('pricing.scheduleHint')||'Select flight days'}
+                 options={[
+                   { label: t('pricing.mon')||'Mon', value: 1 },
+                   { label: t('pricing.tue')||'Tue', value: 2 },
+                   { label: t('pricing.wed')||'Wed', value: 3 },
+                   { label: t('pricing.thu')||'Thu', value: 4 },
+                   { label: t('pricing.fri')||'Fri', value: 5 },
+                   { label: t('pricing.sat')||'Sat', value: 6 },
+                   { label: t('pricing.sun')||'Sun', value: 7 },
+                 ]} />
+             </Form.Item></Col>
              <Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>

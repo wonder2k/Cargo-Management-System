@@ -158,7 +158,7 @@ export const InvoiceList: React.FC = () => {
       label: <span className="flex items-center gap-2"><TrendingUp size={16} />{t('finance.accountsReceivable')}</span>,
       children: (
         <div className="space-y-6">
-          <Card title={t('finance.activeInvoices')} extra={<Button type="primary" size="small" onClick={() => setModalOpen(true)}>{t('common.add')}</Button>}>
+          <Card title={t('finance.activeInvoices')} extra={<Button type="primary" size="small" onClick={async () => { try { const r = await businessApi.getCustomers(); setCustomers(r.data); } catch {} setModalOpen(true); }}>{t('common.add')}</Button>}>
             <Table dataSource={invoices} loading={loading} rowKey="id" size="small"
               columns={[
                 { title: t('finance.invoiceNo'), dataIndex: 'invoiceNo', render: (v: any) => <span className="font-mono font-bold text-blue-600">{v}</span> },
