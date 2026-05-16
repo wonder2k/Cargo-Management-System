@@ -192,7 +192,7 @@ export const BookingList: React.FC = () => {
             title: t('operation.docs') || 'Docs',
             render: (r: Booking) => (
               <Button size="small"
-                icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-slate-400'} />}
+                icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
                 onClick={() => {
                   if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
                   else { setManifestTarget(r); setManifestModalOpen(true); }
