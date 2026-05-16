@@ -147,7 +147,7 @@ export const BookingList: React.FC = () => {
       <div className="mb-3 flex items-center gap-4 text-xs text-slate-400">
         <span className="flex items-center gap-1"><Info size={12} /> {t('operation.docs')||'Docs'}:</span>
         <span className="flex items-center gap-1"><Package size={12} className="text-blue-500" /> {t('operation.manifest')||'Manifest'} = {t('common.download')||'已上传'}</span>
-        <span className="flex items-center gap-1"><Package size={12} className="text-slate-400" /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
+        <span className="flex items-center gap-1"><Package size={12} className="text-orange-500" /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm">
@@ -192,7 +192,7 @@ export const BookingList: React.FC = () => {
             title: t('operation.docs') || 'Docs',
             render: (r: Booking) => (
               <Button size="small"
-                icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} />}
+                icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
                 onClick={() => {
                   if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
                   else { setManifestTarget(r); setManifestModalOpen(true); }
