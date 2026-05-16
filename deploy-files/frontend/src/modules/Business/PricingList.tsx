@@ -408,25 +408,28 @@ export const PricingList: React.FC = () => {
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
              <Col span={6}>
-               <style>{`.sched-wrap .ant-checkbox-group-item:nth-child(4){flex:0 0 100%}`}</style>
-               <Form.Item name="schedule"
-                 label={<div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',width:'100%',gap:8}}>
-                   <span>{t('pricing.schedule')||'Schedule'}</span>
-                   <div style={{fontSize:10,color:'#94a3b8',lineHeight:'13px',textAlign:'right'}}>
-                     <div>1=Mon 2=Tue 3=Wed 4=Thu</div>
-                     <div>5=Fri 6=Sat 7=Sun</div>
-                   </div>
-                 </div>}
+               <style>{`
+                 .sched-wrap { display: flex; flex-direction: column; gap: 0; }
+                 .sched-circles { display: flex; width: 100%; }
+                 .sched-circles .ant-checkbox-wrapper { flex: 1; display: flex; justify-content: center; }
+                 .sched-circles .ant-checkbox-wrapper > span:nth-child(2) { display: none; }
+                 .sched-labels { display: flex; width: 100%; }
+                 .sched-labels > span { flex: 1; text-align: center; font-size: 10px; color: #94a3b8; line-height: 16px; }
+               `}</style>
+               <Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'}
                  getValueFromEvent={(val) => (val||[]).sort().join(',')}
                  getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
                  <div className="sched-wrap">
-                   <Checkbox.Group style={{display:'flex',flexWrap:'wrap',gap:'2px 6px',maxWidth:400}}
+                   <Checkbox.Group className="sched-circles"
                      options={[
-                       { label: '1', value: 1 }, { label: '2', value: 2 },
-                       { label: '3', value: 3 }, { label: '4', value: 4 },
-                       { label: '5', value: 5 }, { label: '6', value: 6 },
-                       { label: '7', value: 7 },
+                       { label: '', value: 1 }, { label: '', value: 2 },
+                       { label: '', value: 3 }, { label: '', value: 4 },
+                       { label: '', value: 5 }, { label: '', value: 6 },
+                       { label: '', value: 7 },
                      ]} />
+                   <div className="sched-labels">
+                     <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+                   </div>
                  </div>
                </Form.Item>
              </Col><Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
