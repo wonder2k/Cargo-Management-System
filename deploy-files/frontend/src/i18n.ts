@@ -1,7 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-
 const resources = {
   en: {
     translation: {
@@ -231,10 +230,10 @@ const resources = {
         viewTrackingInternal: "View internal tracking",
         docs: "Docs",
         manualQuery: "Query on 17TRACK",
+        manifest: "Manifest",
         steps: {
           warehouse: "Warehouse Entry",
           draft: "MAWB Draft",
-        manifest: "Manifest",
           customs: "Customs",
           terminal: "Terminal In",
           tracking: "Depart / Arrive"
@@ -569,10 +568,10 @@ const resources = {
         docs: "文件",
         viewTrackingInternal: "查看内部追踪",
         manualQuery: "在17TRACK查询",
+        manifest: "报关清单",
         steps: {
           warehouse: "入库操作",
           draft: "主单草单",
-        manifest: "报关清单",
           customs: "报关",
           terminal: "分拨理货",
           tracking: "起飞/到达"
@@ -680,7 +679,6 @@ const resources = {
     }
   }
 };
-
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -693,5 +691,4 @@ i18n
       escapeValue: false,
     },
   });
-
 export default i18n;

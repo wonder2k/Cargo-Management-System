@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { FilePlus, Package, Printer, ExternalLink, FileText } from 'lucide-react';
+import { FilePlus, Package, Printer, ExternalLink, FileText, Info } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +34,6 @@ export const BookingList: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rates, setRates] = useState<FlightRate[]>([]);
-  const [mawbs, setMawbs] = useState<MAWB[]>([]);
   const [loading, setLoading] = useState(false);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
@@ -53,78 +52,54 @@ export const BookingList: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookRes, custRes, rateRes, mawbRes] = await Promise.all([
+      const [bookRes, custRes, rateRes] = await Promise.all([
         businessApi.getBookings(),
         businessApi.getCustomers(),
-        businessApi.getRates(),
-        operationApi.getMawbs()
+        businessApi.getRates()
       ]);
-
       setBookings(bookRes.data);
       setCustomers(custRes.data);
       setRates(rateRes.data);
-      setMawbs(mawbRes.data);
-    } catch (e: any) {
-      message.error('Fetch failed');
-    } finally {
-      setLoading(false);
-    }
+    } catch { message.error('Fetch failed'); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async (values: any) => {
     const rate = rates.find(r => r.id === values.rateId);
     if (!rate) return;
     const customer = customers.find(c => c.id === values.customerId);
-
     try {
       await businessApi.createBooking({
-        ...values,
-        origin: rate.origin,
-        destination: rate.destination,
-        carrier: rate.carrier,
-        flightNo: rate.flightNo,
+        ...values, origin: rate.origin, destination: rate.destination,
+        carrier: rate.carrier, flightNo: rate.flightNo,
         flightDate: values.flightDate.toISOString(),
         customerName: customer?.name || '',
       });
       message.success(t('common.success'));
-      setNewModalOpen(false);
-      fetchData();
-      form.resetFields();
-    } catch (e: any) {
-      message.error(t('common.error'));
-    }
+      setNewModalOpen(false); fetchData(); form.resetFields();
+    } catch { message.error(t('common.error')); }
   };
 
   const handleClientAction = async (values: any) => {
     if (!selectedBooking) return;
     try {
-      await businessApi.updateBooking(selectedBooking.id, {
-        ...values,
-        status: 'client_accepted'
-      });
+      await businessApi.updateBooking(selectedBooking.id, { ...values, status: 'client_accepted' });
       message.success(t('common.success'));
-      setActionModalOpen(false);
-      fetchData();
-    } catch (e: any) {
-      message.error(t('common.error'));
-    }
+      setActionModalOpen(false); fetchData();
+    } catch { message.error(t('common.error')); }
   };
 
   const triggerDownload = (fileName: string) => {
-    if (fileName?.startsWith('http')) {
-      window.open(fileName, '_blank');
-    } else {
+    if (fileName?.startsWith('http')) window.open(fileName, '_blank');
+    else {
       const blob = new Blob(['Mock file: ' + fileName], { type: 'text/plain' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fileName;
       document.body.appendChild(a); a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url); document.body.removeChild(a);
     }
   };
 
@@ -133,13 +108,10 @@ export const BookingList: React.FC = () => {
     try {
       const res = await uploadApi.uploadFile(file);
       await businessApi.updateBooking(manifestTarget.id, {
-        manifestFileUrl: res.data.fileUrl,
-        manifestFileName: res.data.fileName,
+        manifestFileUrl: res.data.fileUrl, manifestFileName: res.data.fileName,
       });
       message.success('Manifest uploaded');
-      setManifestModalOpen(false);
-      setManifestTarget(null);
-      fetchData();
+      setManifestModalOpen(false); setManifestTarget(null); fetchData();
     } catch { message.error('Upload failed'); }
     return false;
   };
@@ -155,7 +127,7 @@ export const BookingList: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('common.bookings')}</Title>
           <div className="flex items-center gap-2">
@@ -163,172 +135,133 @@ export const BookingList: React.FC = () => {
             {needsAction > 0 && <Badge count={needsAction} size="small" color="#faad14" />}
           </div>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<FilePlus size={18} />}
+        <Button type="primary" size="large" icon={<FilePlus size={18} />}
           onClick={async () => {
-            try {
-              const [custRes, rateRes] = await Promise.all([businessApi.getCustomers(), businessApi.getRates()]);
-              setCustomers(custRes.data); setRates(rateRes.data);
-            } catch {}
+            try { const [custRes, rateRes] = await Promise.all([businessApi.getCustomers(), businessApi.getRates()]); setCustomers(custRes.data); setRates(rateRes.data); } catch {}
             setNewModalOpen(true);
-          }}
-        >
+          }}>
           {t('common.add')}
         </Button>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm">
-        <Table
-          dataSource={bookings}
-          loading={loading}
-          rowKey="id"
-          columns={[
-            {
-              title: t('quotes.quoteNo') || 'No',
-              sorter: (a: Booking, b: Booking) => (a.bookingNo || '').localeCompare(b.bookingNo || ''),
-              render: (r: Booking) => (
-                <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }}>
-                  <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
-                  <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
-                  {r.mawbNo && (
-                    <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
-                      {r.mawbNo} <ExternalLink size={10} />
-                    </span>
-                  )}
-                </div>
-              )
-            },
-            {
-              title: 'Route',
-              render: (r: Booking) => (
-                <div className="flex items-center gap-2">
-                  <Badge count={r.carrier} color="#1d4ed8" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold">{r.origin} → {r.destination}</span>
-                    <span className="text-[10px] text-slate-400">ETD: {dayjs(r.flightDate).format('MM-DD')}</span>
-                  </div>
-                </div>
-              )
-            },
-            {
-              title: 'Cargo',
-              render: (r: Booking) => (
-                <div className="text-xs">
-                  <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
-                  <div className="text-slate-400 truncate w-32">{r.goodsDescription}</div>
-                </div>
-              )
-            },
-            {
-              title: t('operation.docs') || 'Docs',
-              render: (r: Booking) => (
-                <Button size="small" icon={<Package size={14} />}
-                  className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
-                  onClick={() => {
-                    if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
-                    else { setManifestTarget(r); setManifestModalOpen(true); }
-                  }}>
-                  {t('operation.manifest')||'Manifest'}
-                </Button>
-              ),
-            },
-            {
-              title: t('common.status'),
-              filters: [
-                { text: t('booking.status.pending'), value: 'pending' },
-                { text: t('booking.status.prebooked'), value: 'pre_booked' },
-                { text: t('booking.status.space_confirmed'), value: 'space_confirmed' },
-                { text: t('booking.status.client_accepted'), value: 'client_accepted' },
-                { text: t('booking.status.finalized'), value: 'finalized' },
-                { text: t('booking.status.closed'), value: 'closed' },
-              ],
-              onFilter: (value: any, r: Booking) => r.status === value,
-              sorter: (a: Booking, b: Booking) => (a.status || '').localeCompare(b.status || ''),
-              render: (r: Booking) => getStatusTag(r.status)
-            },
-            {
-              title: t('common.actions'),
-              align: 'right' as const,
-              render: (r: Booking) => (
-                <Space>
-                  {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
-                    <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
-                  )}
-                  {r.status === 'finalized' && (
-                    <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
-                  )}
-                </Space>
-              )
-            }
-          ]}
-        />
+      <div className="mb-3 flex items-center gap-4 text-xs text-slate-400">
+        <span className="flex items-center gap-1"><Info size={12} /> {t('operation.docs')||'Docs'}:</span>
+        <span className="flex items-center gap-1"><Package size={12} className="text-blue-500" /> {t('operation.manifest')||'Manifest'} = {t('common.download')||'已上传'}</span>
+        <span className="flex items-center gap-1"><Package size={12} className="text-slate-400" /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
       </div>
 
-      <Modal
-        title={t('common.add')}
-        open={newModalOpen}
-        onCancel={() => setNewModalOpen(false)}
-        onOk={() => form.submit()}
-        width={700}
-      >
+      <div className="bg-white border rounded-xl shadow-sm">
+        <Table dataSource={bookings} loading={loading} rowKey="id" columns={[
+          {
+            title: t('quotes.quoteNo') || 'No',
+            sorter: (a: Booking, b: Booking) => (a.bookingNo || '').localeCompare(b.bookingNo || ''),
+            render: (r: Booking) => (
+              <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }}>
+                <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
+                <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
+                {r.mawbNo && (
+                  <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
+                    {r.mawbNo} <ExternalLink size={10} />
+                  </span>
+                )}
+              </div>
+            )
+          },
+          {
+            title: 'Route',
+            render: (r: Booking) => (
+              <div className="flex items-center gap-2">
+                <Badge count={r.carrier} color="#1d4ed8" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold">{r.origin} → {r.destination}</span>
+                  <span className="text-[10px] text-slate-400">ETD: {dayjs(r.flightDate).format('MM-DD')}</span>
+                </div>
+              </div>
+            )
+          },
+          {
+            title: 'Cargo',
+            render: (r: Booking) => (
+              <div className="text-xs">
+                <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
+                <div className="text-slate-400 truncate w-32">{r.goodsDescription}</div>
+              </div>
+            )
+          },
+          {
+            title: t('operation.docs') || 'Docs',
+            render: (r: Booking) => (
+              <Button size="small"
+                icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-slate-400'} />}
+                onClick={() => {
+                  if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+                  else { setManifestTarget(r); setManifestModalOpen(true); }
+                }}>
+                {t('operation.manifest')||'Manifest'}
+              </Button>
+            ),
+          },
+          {
+            title: t('common.status'),
+            filters: [
+              { text: t('booking.status.pending'), value: 'pending' },
+              { text: t('booking.status.prebooked'), value: 'pre_booked' },
+              { text: t('booking.status.space_confirmed'), value: 'space_confirmed' },
+              { text: t('booking.status.client_accepted'), value: 'client_accepted' },
+              { text: t('booking.status.finalized'), value: 'finalized' },
+              { text: t('booking.status.closed'), value: 'closed' },
+            ],
+            onFilter: (value: any, r: Booking) => r.status === value,
+            sorter: (a: Booking, b: Booking) => (a.status || '').localeCompare(b.status || ''),
+            render: (r: Booking) => getStatusTag(r.status)
+          },
+          {
+            title: t('common.actions'),
+            align: 'right' as const,
+            render: (r: Booking) => (
+              <Space>
+                {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
+                  <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
+                )}
+                {r.status === 'finalized' && (
+                  <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
+                )}
+              </Space>
+            )
+          }
+        ]} />
+      </div>
+
+      <Modal title={t('common.add')} open={newModalOpen} onCancel={() => setNewModalOpen(false)}
+        onOk={() => form.submit()} width={700}>
         <Form form={form} layout="vertical" onFinish={handleCreate} initialValues={{ pieces: 1, currency: 'CNY', declarationMethod: 'formal' }}>
           <Row gutter={16}>
-             <Col span={12}>
-               <Form.Item name="customerId" label={t('common.customer')||'Customer'} rules={[{ required: true }]}>
-                 <Select options={customers.map(c => ({ label: c.name, value: c.id }))} />
-               </Form.Item>
-             </Col>
-             <Col span={12}>
-               <Form.Item name="rateId" label={t('common.route')||'Route'} rules={[{ required: true }]}>
-                 <Select options={rates.map(r => ({ label: `[${r.carrier}] ${r.origin}→${r.destination}`, value: r.id }))}
-                   onChange={(id) => {
-                     const r = rates.find(x => x.id === id);
-                     setRateSchedule(r?.schedule || '');
-                   }} />
-               </Form.Item>
-             </Col>
+             <Col span={12}><Form.Item name="customerId" label={t('common.customer')||'Customer'} rules={[{ required: true }]}>
+               <Select options={customers.map(c => ({ label: c.name, value: c.id }))} /></Form.Item></Col>
+             <Col span={12}><Form.Item name="rateId" label={t('common.route')||'Route'} rules={[{ required: true }]}>
+               <Select options={rates.map(r => ({ label: `[${r.carrier}] ${r.origin}→${r.destination}`, value: r.id }))}
+                 onChange={(id) => { const r = rates.find(x => x.id === id); setRateSchedule(r?.schedule || ''); }} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="flightDate" label={t('common.flightDate')||'Flight Date'} rules={[{ required: true }]}>
-                <DatePicker className="w-full"
-                  disabledDate={(current) => {
-                    if (!rateSchedule || !current) return false;
-                    const dow = current.day();
-                    const schedDays = rateSchedule.split(',').map(Number);
-                    const jsDay = dow === 0 ? 7 : dow;
-                    return !schedDays.includes(jsDay);
-                  }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="declarationMethod" label={t('bookings.declaration')||'Declaration'} rules={[{ required: true }]}>
-                <Select options={[
-                  { label: t('bookings.declarationMethods.formal')||'Formal', value: 'formal' },
-                  { label: '9610', value: '9610' },
-                  { label: '9710', value: '9710' },
-                  { label: '9810', value: '9810' }
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unitPrice" label={t('common.unitPrice')||'Unit Price'} rules={[{ required: true }]}>
-                <InputNumber className="w-full" />
-              </Form.Item>
-            </Col>
+            <Col span={8}><Form.Item name="flightDate" label={t('common.flightDate')||'Flight Date'} rules={[{ required: true }]}>
+              <DatePicker className="w-full" disabledDate={(current) => {
+                if (!rateSchedule || !current) return false;
+                const dow = current.day();
+                const schedDays = rateSchedule.split(',').map(Number);
+                return !schedDays.includes(dow === 0 ? 7 : dow);
+              }} /></Form.Item></Col>
+            <Col span={8}><Form.Item name="declarationMethod" label={t('bookings.declaration')||'Declaration'} rules={[{ required: true }]}>
+              <Select options={[
+                { label: t('bookings.declarationMethods.formal')||'Formal', value: 'formal' },
+                { label: '9610', value: '9610' }, { label: '9710', value: '9710' }, { label: '9810', value: '9810' }
+              ]} /></Form.Item></Col>
+            <Col span={8}><Form.Item name="unitPrice" label={t('common.unitPrice')||'Unit Price'} rules={[{ required: true }]}>
+              <InputNumber className="w-full" /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
-             <Col span={8}>
-               <Form.Item name="pieces" label={t('common.pieces')||'Pieces'} rules={[{ required: true }]}><InputNumber className="w-full" min={1} /></Form.Item>
-             </Col>
-             <Col span={8}>
-               <Form.Item name="weight" label={t('common.weight')||'Weight'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="KG" /></Form.Item>
-             </Col>
-             <Col span={8}>
-               <Form.Item name="volume" label={t('common.volume')||'Volume'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="CBM" /></Form.Item>
-             </Col>
+             <Col span={8}><Form.Item name="pieces" label={t('common.pieces')||'Pieces'} rules={[{ required: true }]}><InputNumber className="w-full" min={1} /></Form.Item></Col>
+             <Col span={8}><Form.Item name="weight" label={t('common.weight')||'Weight'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="KG" /></Form.Item></Col>
+             <Col span={8}><Form.Item name="volume" label={t('common.volume')||'Volume'} rules={[{ required: true }]}><InputNumber className="w-full" addonAfter="CBM" /></Form.Item></Col>
           </Row>
           <Form.Item name="goodsDescription" label={t('common.goodsDesc')||'Goods Description'} rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
         </Form>
@@ -343,12 +276,10 @@ export const BookingList: React.FC = () => {
       </Modal>
 
       <Modal title={t('operation.manifest')||'Manifest'} open={manifestModalOpen}
-        onCancel={() => { setManifestModalOpen(false); setManifestTarget(null); }}
-        footer={null}>
+        onCancel={() => { setManifestModalOpen(false); setManifestTarget(null); }} footer={null}>
         <div className="py-4">
           <Upload.Dragger accept=".xlsx,.xls,.pdf"
-            beforeUpload={(file) => handleUploadManifest(file)}
-            showUploadList={false}>
+            beforeUpload={(file) => handleUploadManifest(file)} showUploadList={false}>
             <p className="text-4xl mb-2 text-slate-300"><FileText size={32} /></p>
             <p className="text-sm font-medium">Click or drag manifest file here</p>
             <p className="text-xs text-slate-400 mt-1">Excel (.xlsx) or PDF format, max 10MB</p>
@@ -356,42 +287,38 @@ export const BookingList: React.FC = () => {
         </div>
       </Modal>
 
-      <Drawer
-         title={<span className="font-mono">{selectedBookingDetail?.bookingNo}</span>}
-         open={detailDrawerOpen}
-         onClose={() => setDetailDrawerOpen(false)}
-         width={450}
-       >
-         {selectedBookingDetail && (
-           <div className="space-y-4">
-             <Card size="small" className="bg-slate-50">
-               <Row gutter={[16, 16]}>
-                 <Col span={24}><Text type="secondary">Customer:</Text> <div className="font-bold">{selectedBookingDetail.customerName}</div></Col>
-                 <Col span={12}><Text type="secondary">Route:</Text> <div className="font-bold">{selectedBookingDetail.origin} → {selectedBookingDetail.destination}</div></Col>
-                 <Col span={12}><Text type="secondary">Carrier:</Text> <div className="font-bold font-mono">{selectedBookingDetail.carrier}</div></Col>
-               </Row>
-             </Card>
-             <Divider />
-             <Row gutter={[16, 16]}>
-               <Col span={8}><Statistic title="Pieces" value={selectedBookingDetail.pieces} /></Col>
-               <Col span={8}><Statistic title="Weight" value={selectedBookingDetail.weight} suffix="KG" /></Col>
-               <Col span={8}><Statistic title="Volume" value={selectedBookingDetail.volume} suffix="CBM" /></Col>
-             </Row>
-             <Divider orientation="left">{t('operation.docs')||'Docs'}</Divider>
-             {selectedBookingDetail.manifestFileUrl ? (
-               <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(selectedBookingDetail.manifestFileUrl!)}>
-                 <Space><Package size={18} className="text-blue-500" /> <Text className="font-medium">{t('operation.manifest')||'Manifest'}</Text></Space>
-                 <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
-               </div>
-             ) : (
-               <div className="flex items-center justify-between p-3 border rounded">
-                 <Space><Package size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.manifest')||'Manifest'}</Text></Space>
-                 <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
-               </div>
-             )}
-           </div>
-         )}
-       </Drawer>
+      <Drawer title={<span className="font-mono">{selectedBookingDetail?.bookingNo}</span>}
+        open={detailDrawerOpen} onClose={() => setDetailDrawerOpen(false)} width={450}>
+        {selectedBookingDetail && (
+          <div className="space-y-4">
+            <Card size="small" className="bg-slate-50">
+              <Row gutter={[16, 16]}>
+                <Col span={24}><Text type="secondary">Customer:</Text> <div className="font-bold">{selectedBookingDetail.customerName}</div></Col>
+                <Col span={12}><Text type="secondary">Route:</Text> <div className="font-bold">{selectedBookingDetail.origin} → {selectedBookingDetail.destination}</div></Col>
+                <Col span={12}><Text type="secondary">Carrier:</Text> <div className="font-bold font-mono">{selectedBookingDetail.carrier}</div></Col>
+              </Row>
+            </Card>
+            <Divider />
+            <Row gutter={[16, 16]}>
+              <Col span={8}><Statistic title="Pieces" value={selectedBookingDetail.pieces} /></Col>
+              <Col span={8}><Statistic title="Weight" value={selectedBookingDetail.weight} suffix="KG" /></Col>
+              <Col span={8}><Statistic title="Volume" value={selectedBookingDetail.volume} suffix="CBM" /></Col>
+            </Row>
+            <Divider orientation="left">{t('operation.docs')||'Docs'}</Divider>
+            {selectedBookingDetail.manifestFileUrl ? (
+              <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(selectedBookingDetail.manifestFileUrl!)}>
+                <Space><Package size={18} className="text-blue-500" /> <Text className="font-medium">{t('operation.manifest')||'Manifest'}</Text></Space>
+                <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 border rounded">
+                <Space><Package size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.manifest')||'Manifest'}</Text></Space>
+                <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
+              </div>
+            )}
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };
