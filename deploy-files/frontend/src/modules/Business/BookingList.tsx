@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip } from 'antd';
-import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
+import { Customer, FlightRate, Booking, BookingStatus, MawbStatus } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { FilePlus, Package, Printer, ExternalLink, FileText, Info } from 'lucide-react';
+import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
-import { businessApi, operationApi, uploadApi } from '../../services/api';
+import { businessApi, uploadApi } from '../../services/api';
 
 const { Text, Title } = Typography;
 
@@ -146,8 +146,8 @@ export const BookingList: React.FC = () => {
 
       <div className="mb-3 flex items-center gap-4 text-xs text-slate-400">
         <span className="flex items-center gap-1"><Info size={12} /> {t('operation.docs')||'Docs'}:</span>
-        <span className="flex items-center gap-1"><Package size={12} className="text-blue-500" /> {t('operation.manifest')||'Manifest'} = {t('common.download')||'已上传'}</span>
-        <span className="flex items-center gap-1"><Package size={12} className="text-orange-500" /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
+        <span className="flex items-center gap-1"><Package size={12} style={{color:'#3b82f6'}} /> {t('operation.manifest')||'Manifest'} = {t('common.download')||'已上传'}</span>
+        <span className="flex items-center gap-1"><Package size={12} style={{color:'#f97316'}} /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm">
@@ -168,7 +168,7 @@ export const BookingList: React.FC = () => {
             )
           },
           {
-            title: 'Route',
+            title: t('common.route') || 'Route',
             render: (r: Booking) => (
               <div className="flex items-center gap-2">
                 <Badge count={r.carrier} color="#1d4ed8" />
@@ -177,10 +177,58 @@ export const BookingList: React.FC = () => {
                   <span className="text-[10px] text-slate-400">ETD: {dayjs(r.flightDate).format('MM-DD')}</span>
                 </div>
               </div>
-            )
+            ),
+            filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => {
+              const origins = Array.from(new Set(bookings.map(b => b.origin))).sort();
+              const destinations = Array.from(new Set(bookings.map(b => b.destination))).sort();
+              const currentOrigin = selectedKeys.find((k: string) => k.startsWith('o:'))?.replace('o:', '') || '';
+              const currentDest = selectedKeys.find((k: string) => k.startsWith('d:'))?.replace('d:', '') || '';
+              return (
+                <div className="p-3 w-64 flex flex-col gap-3">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><PlaneTakeoff size={12} /> {t('common.origin')}</div>
+                    <Select className="w-full" placeholder={t('common.all')} allowClear
+                      value={currentOrigin || undefined}
+                      options={origins.map(o => ({ label: o, value: o }))}
+                      onChange={(val) => {
+                        const newKeys = selectedKeys.filter((k: string) => !k.startsWith('o:'));
+                        if (val) newKeys.push(`o:${val}`);
+                        setSelectedKeys(newKeys);
+                      }} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><PlaneLanding size={12} /> {t('common.destination')}</div>
+                    <Select className="w-full" placeholder={t('common.all')} allowClear
+                      value={currentDest || undefined}
+                      options={destinations.map(d => ({ label: d, value: d }))}
+                      onChange={(val) => {
+                        const newKeys = selectedKeys.filter((k: string) => !k.startsWith('d:'));
+                        if (val) newKeys.push(`d:${val}`);
+                        setSelectedKeys(newKeys);
+                      }} />
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <Button size="small" onClick={() => { if (clearFilters) clearFilters(); confirm(); }} className="text-xs">{t('common.cancel')}</Button>
+                    <Button type="primary" size="small" onClick={() => confirm()} className="text-xs bg-blue-600">{t('common.confirm')}</Button>
+                  </div>
+                </div>
+              );
+            },
+            filterIcon: (filtered: boolean) => (
+              <div className="flex flex-col -space-y-1 items-center">
+                <PlaneTakeoff size={12} className={filtered ? 'text-blue-500' : 'text-slate-400'} />
+                <PlaneLanding size={12} className={filtered ? 'text-blue-500' : 'text-slate-400'} />
+              </div>
+            ),
+            onFilter: (value: any, record: Booking) => {
+              const val = value as string;
+              if (val.startsWith('o:')) return record.origin === val.replace('o:', '');
+              if (val.startsWith('d:')) return record.destination === val.replace('d:', '');
+              return true;
+            }
           },
           {
-            title: 'Cargo',
+            title: t('common.cargo') || 'Cargo',
             render: (r: Booking) => (
               <div className="text-xs">
                 <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
@@ -224,7 +272,7 @@ export const BookingList: React.FC = () => {
                   <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
                 )}
                 {r.status === 'finalized' && (
-                  <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
+                  <Button size="small" icon={<Printer size={14} style={{ color: '#3b82f6' }} />} onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
                 )}
               </Space>
             )
