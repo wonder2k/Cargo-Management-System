@@ -435,7 +435,7 @@ export const MawbList: React.FC = () => {
                 if (hasManifest && b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
                 else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
               }}>
-              {t('common.upload')||'Man'}
+              {t('operation.manifest')||'Manifest'}
             </Button>
             <Button size="small" icon={<FileText size={12} />}
               className={(hasDraft ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-[11px]'}
@@ -820,7 +820,7 @@ export const MawbList: React.FC = () => {
                         if (b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
                         else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
                       }}>
-                      {t('common.upload')||'Manifest'}
+                      {t('operation.manifest')||'Manifest'}
                     </Button>
                     <Button size="small" icon={<FileText size={14} />}
                       className={selectedMawb.draftFileUrl ? 'text-blue-600' : 'text-red-500'}

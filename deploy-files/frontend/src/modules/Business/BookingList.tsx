@@ -230,7 +230,7 @@ export const BookingList: React.FC = () => {
                     if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
                     else { setManifestTarget(r); setManifestModalOpen(true); }
                   }}>
-                  {t('common.upload')||'Man'}
+                  {t('operation.manifest')||'Manifest'}
                 </Button>
               ),
             },
@@ -342,7 +342,7 @@ export const BookingList: React.FC = () => {
         </Form>
       </Modal>
 
-      <Modal title={t('common.upload')+' Manifest'} open={manifestModalOpen}
+      <Modal title={t('operation.manifest')||'Manifest'} open={manifestModalOpen}
         onCancel={() => { setManifestModalOpen(false); setManifestTarget(null); }}
         footer={null}>
         <div className="py-4">
@@ -377,14 +377,17 @@ export const BookingList: React.FC = () => {
                <Col span={8}><Statistic title="Weight" value={selectedBookingDetail.weight} suffix="KG" /></Col>
                <Col span={8}><Statistic title="Volume" value={selectedBookingDetail.volume} suffix="CBM" /></Col>
              </Row>
-             {selectedBookingDetail.manifestFileUrl && (
-               <>
-                 <Divider orientation="left">{t('operation.docs')||'Docs'}</Divider>
-                 <Button size="small" icon={<FileText size={14} />}
-                   className="text-blue-600" onClick={() => triggerDownload(selectedBookingDetail.manifestFileUrl!)}>
-                   {t('common.download')||'Manifest'}
-                 </Button>
-               </>
+             <Divider orientation="left">{t('operation.docs')||'Docs'}</Divider>
+             {selectedBookingDetail.manifestFileUrl ? (
+               <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(selectedBookingDetail.manifestFileUrl!)}>
+                 <Space><Package size={18} className="text-blue-500" /> <Text className="font-medium">{t('operation.manifest')||'Manifest'}</Text></Space>
+                 <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+               </div>
+             ) : (
+               <div className="flex items-center justify-between p-3 border rounded">
+                 <Space><Package size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.manifest')||'Manifest'}</Text></Space>
+                 <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
+               </div>
              )}
            </div>
          )}

@@ -234,6 +234,7 @@ const resources = {
         steps: {
           warehouse: "Warehouse Entry",
           draft: "MAWB Draft",
+        manifest: "Manifest",
           customs: "Customs",
           terminal: "Terminal In",
           tracking: "Depart / Arrive"
@@ -571,6 +572,7 @@ const resources = {
         steps: {
           warehouse: "入库操作",
           draft: "主单草单",
+        manifest: "报关清单",
           customs: "报关",
           terminal: "分拨理货",
           tracking: "起飞/到达"
