@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider, DatePicker, Upload, Tooltip } from 'antd';
 import { MAWB, MawbStatus, Booking, Customer } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity } from 'lucide-react';
+import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity, Info } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { operationApi, businessApi, uploadApi } from '../../services/api';
@@ -651,6 +651,13 @@ export const MawbList: React.FC = () => {
       </div>
 
       <Card className="shadow-sm">
+        <div className="mb-3 flex items-center gap-4 text-xs text-slate-400">
+          <span className="flex items-center gap-1"><Info size={12} /> {t('operation.docs')||'Docs'}:</span>
+          <span className="flex items-center gap-1"><Package size={12} style={{color:'#3b82f6'}} /> {t('operation.manifest')||'Manifest'} = {t('common.download')||'已上传'}</span>
+          <span className="flex items-center gap-1"><Package size={12} style={{color:'#f97316'}} /> {t('operation.manifest')||'Manifest'} = {t('common.upload')||'待上传'}</span>
+          <span className="flex items-center gap-1"><FileText size={12} style={{color:'#3b82f6'}} /> {t('operation.steps.draft')||'Draft'} = {t('common.download')||'已上传'}</span>
+          <span className="flex items-center gap-1"><FileText size={12} style={{color:'#f97316'}} /> {t('operation.steps.draft')||'Draft'} = {t('common.upload')||'待上传'}</span>
+        </div>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
