@@ -408,11 +408,14 @@ export const PricingList: React.FC = () => {
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
              <Col span={6}>
-               <style>{`.sched-wrap .ant-checkbox-group-item:nth-child(7){flex:0 0 100%}`}</style>
+               <style>{`.sched-wrap .ant-checkbox-group-item:nth-child(4){flex:0 0 100%}`}</style>
                <Form.Item name="schedule"
                  label={<div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',width:'100%',gap:8}}>
                    <span>{t('pricing.schedule')||'Schedule'}</span>
-                   <span style={{fontSize:10,color:'#94a3b8',whiteSpace:'nowrap',lineHeight:'22px'}}>1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun</span>
+                   <div style={{fontSize:10,color:'#94a3b8',lineHeight:'13px',textAlign:'right'}}>
+                     <div>1=Mon 2=Tue 3=Wed 4=Thu</div>
+                     <div>5=Fri 6=Sat 7=Sun</div>
+                   </div>
                  </div>}
                  getValueFromEvent={(val) => (val||[]).sort().join(',')}
                  getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
