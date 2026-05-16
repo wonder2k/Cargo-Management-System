@@ -430,7 +430,7 @@ export const MawbList: React.FC = () => {
         return (
           <Space size="small" wrap>
             <Button size="small"
-              icon={<Package size={14} className={hasManifest ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
+              icon={<Package size={14} className={hasManifest ? 'text-blue-500' : 'text-orange-500'} />}
               onClick={() => {
                 if (hasManifest && b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
                 else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
@@ -438,7 +438,7 @@ export const MawbList: React.FC = () => {
               {t('operation.manifest')||'Manifest'}
             </Button>
             <Button size="small"
-              icon={<FileText size={14} className={hasDraft ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
+              icon={<FileText size={14} className={hasDraft ? 'text-blue-500' : 'text-orange-500'} />}
               onClick={() => {
                 if (hasDraft && r.draftFileUrl) triggerDownload(r.draftFileUrl);
                 else { setDraftTarget(r); setDraftModalOpen(true); }
@@ -515,7 +515,7 @@ export const MawbList: React.FC = () => {
       title: t('operation.docs') || 'Docs',
       render: (_: any, r: Booking) => (
         <Button size="small"
-          icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
+          icon={<Package size={14} className={r.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} />}
           onClick={() => {
             if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
             else { setManifestTarget(r); setManifestModalOpen(true); }
@@ -828,7 +828,7 @@ export const MawbList: React.FC = () => {
                 return (
                   <>
                     <Button size="small" 
-                      icon={<Package size={14} className={b?.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
+                      icon={<Package size={14} className={b?.manifestFileUrl ? 'text-blue-500' : 'text-orange-500'} />}
                       onClick={() => {
                         if (b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
                         else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
@@ -836,7 +836,7 @@ export const MawbList: React.FC = () => {
                       {t('operation.manifest')||'Manifest'}
                     </Button>
                     <Button size="small" 
-                      icon={<FileText size={14} className={selectedMawb.draftFileUrl ? 'text-blue-500' : 'text-orange-500'} fill="currentColor" />}
+                      icon={<FileText size={14} className={selectedMawb.draftFileUrl ? 'text-blue-500' : 'text-orange-500'} />}
                       onClick={() => {
                         if (selectedMawb.draftFileUrl) triggerDownload(selectedMawb.draftFileUrl);
                         else { setDraftTarget(selectedMawb); setDraftModalOpen(true); }
