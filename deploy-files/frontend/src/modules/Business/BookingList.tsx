@@ -149,20 +149,19 @@ export const BookingList: React.FC = () => {
     return <Tag color={config?.color || 'default'}>{t(config?.labelKey || status)}</Tag>;
   };
 
-  // Summary counts
-  const pendingSubmit = bookings.filter(b => b.status === 'pre_booked' || b.status === 'space_confirmed').length;
-  const finalizedCount = bookings.filter(b => b.status === 'finalized').length;
+  // Booking count needing action (submit or manifest upload)
+  const needsAction = bookings.filter(b =>
+    (b.status === 'pre_booked' || b.status === 'space_confirmed') || !b.manifestFileUrl
+  ).length;
 
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <Title level={2} className="mb-0">{t('common.bookings')}</Title>
-          <Text type="secondary">{t('bookings.subtitle')}</Text>
-          <div className="flex gap-4 mt-2">
-            <span className="text-xs text-slate-500">{t('common.all')}: <Badge count={bookings.length} size="small" style={{ backgroundColor: '#8c8c8c' }} /></span>
-            <span className="text-xs text-slate-500">{t('common.submit')}: <Badge count={pendingSubmit} size="small" color="#faad14" /></span>
-            <span className="text-xs text-slate-500">{t('booking.status.finalized')}: <Badge count={finalizedCount} size="small" color="#87d068" /></span>
+          <div className="flex items-center gap-2">
+            <Text type="secondary">{t('bookings.subtitle')}</Text>
+            {needsAction > 0 && <Badge count={needsAction} size="small" color="#faad14" />}
           </div>
         </div>
         <Button
@@ -222,6 +221,17 @@ export const BookingList: React.FC = () => {
                   <div className="text-slate-400 truncate w-32">{r.goodsDescription}</div>
                 </div>
               )
+            },
+            {
+              title: t('operation.docs') || 'Docs',
+              width: 80,
+              align: 'center' as const,
+              render: (r: Booking) => (
+                <FileText size={16}
+                  className={r.manifestFileUrl ? 'text-blue-500' : 'text-slate-300'}
+                  style={r.manifestFileUrl ? { filter: 'drop-shadow(0 0 1px #3b82f6)' } : undefined}
+                />
+              ),
             },
             {
               title: t('common.status'),
