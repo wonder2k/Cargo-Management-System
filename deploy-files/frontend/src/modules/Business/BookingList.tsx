@@ -149,7 +149,6 @@ export const BookingList: React.FC = () => {
     return <Tag color={config?.color || 'default'}>{t(config?.labelKey || status)}</Tag>;
   };
 
-  // Booking count needing action (submit or manifest upload)
   const needsAction = bookings.filter(b =>
     (b.status === 'pre_booked' || b.status === 'space_confirmed') || !b.manifestFileUrl
   ).length;
@@ -224,13 +223,15 @@ export const BookingList: React.FC = () => {
             },
             {
               title: t('operation.docs') || 'Docs',
-              width: 80,
-              align: 'center' as const,
               render: (r: Booking) => (
-                <FileText size={16}
-                  className={r.manifestFileUrl ? 'text-blue-500' : 'text-slate-300'}
-                  style={r.manifestFileUrl ? { filter: 'drop-shadow(0 0 1px #3b82f6)' } : undefined}
-                />
+                <Button size="small" icon={<Package size={14} />}
+                  className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
+                  onClick={() => {
+                    if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+                    else { setManifestTarget(r); setManifestModalOpen(true); }
+                  }}>
+                  {t('common.upload')||'Man'}
+                </Button>
               ),
             },
             {
@@ -255,14 +256,6 @@ export const BookingList: React.FC = () => {
                   {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
                     <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
                   )}
-                  <Button size="small" icon={<FileText size={12} />}
-                    className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
-                    onClick={() => {
-                      if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
-                      else { setManifestTarget(r); setManifestModalOpen(true); }
-                    }}>
-                    {t('common.upload')||'Man'}
-                  </Button>
                   {r.status === 'finalized' && (
                     <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
                   )}
