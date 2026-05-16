@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider, DatePicker, Upload, Tooltip } from 'antd';
 import { MAWB, MawbStatus, Booking, Customer } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Plane, Clock, TrendingUp, Upload as UploadIcon, ExternalLink } from 'lucide-react';
+import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Plane, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { operationApi, businessApi, uploadApi } from '../../services/api';
+import MawbTrackingTable from '../../components/MawbTrackingTable';
 
 const { Text, Title } = Typography;
 
@@ -30,6 +31,8 @@ export const MawbList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('active');
+  const [routeSortField, setRouteSortField] = useState<'origin' | 'destination' | null>(null);
+  const [routeSortOrder, setRouteSortOrder] = useState<'ascend' | 'descend'>('ascend');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedMawb, setSelectedMawb] = useState<MAWB | null>(null);
@@ -149,6 +152,8 @@ export const MawbList: React.FC = () => {
         dimensions: values.dims || [],
         remarks: values.remarks || '',
       });
+      // Auto-register with 17TRACK
+      try { fetch('/api/track/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: selectedMawb.mawbNo }) }); } catch {}
       message.success(t('common.success'));
       setWarehouseModalOpen(false);
       fetchData();
@@ -308,24 +313,135 @@ export const MawbList: React.FC = () => {
   );
   const activeMawbCount = mawbs.filter(m => m.status !== 'closed' && m.status !== 'exception').length;
 
+  const triggerDownload = (fileName: string) => {
+    if (fileName?.startsWith('http')) {
+      window.open(fileName, '_blank');
+    } else {
+      const blob = new Blob(['Mock file content for: ' + fileName], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  };
+
+  // Route sort helpers
+  const handleRouteSort = (field: 'origin' | 'destination') => {
+    if (routeSortField === field) {
+      setRouteSortOrder(prev => prev === 'ascend' ? 'descend' : 'ascend');
+    } else {
+      setRouteSortField(field);
+      setRouteSortOrder('ascend');
+    }
+  };
+  const sortedMawbs = !routeSortField ? filteredMawbs : [...filteredMawbs].sort((a, b) => {
+    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
+    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
+  });
+  const sortedPending = !routeSortField ? pendingBookings : [...pendingBookings].sort((a, b) => {
+    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
+    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
+  });
+  const sortedFinished = !routeSortField ? finishedBookings : [...finishedBookings].sort((a, b) => {
+    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
+    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
+  });
+
+  const RouteHeader = () => (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span>{t('common.route')}</span>
+      <div style={{ display: 'inline-flex', gap: 1 }}>
+        <Plane size={10} className={`cursor-pointer ${routeSortField === 'origin' ? 'text-blue-500' : 'text-slate-300'}`}
+          style={{ transform: 'rotate(-90deg)' }} onClick={() => handleRouteSort('origin')} />
+        <Plane size={10} className={`cursor-pointer ${routeSortField === 'destination' ? 'text-blue-500' : 'text-slate-300'}`}
+          style={{ transform: 'rotate(90deg)' }} onClick={() => handleRouteSort('destination')} />
+      </div>
+    </div>
+  );
+
   // ==== MAWB List Columns ====
   const mawbColumns = [
     {
       title: t('operation.mawbRef'),
       render: (_: any, r: MAWB) => (
-        <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }}>
-          <span className="text-sm font-mono font-bold text-blue-600">{r.mawbNo}</span>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-mono font-bold text-blue-600 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }}>{r.mawbNo}</span>
+            <Tooltip title={t('operation.viewTrackingInternal')}><Search size={11} className="text-slate-300 hover:text-blue-500 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }} /></Tooltip>
+            <Tooltip title={t('operation.manualQuery')}><ExternalLink size={11} className="text-slate-300 hover:text-blue-500 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')} /></Tooltip>
+          </div>
           <span className="text-[10px] text-slate-400">{r.carrier || '--'}</span>
         </div>
       ),
     },
     {
-      title: t('common.route') || 'Route',
+      title: <RouteHeader />,
       render: (_: any, r: MAWB) => <Tag color="blue">{r.origin} → {r.destination}</Tag>,
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => {
+        const origins = Array.from(new Set(mawbs.map(m => m.origin))).sort();
+        const destinations = Array.from(new Set(mawbs.map(m => m.destination))).sort();
+        const currentOrigin = selectedKeys.find((k: string) => k.startsWith('o:'))?.replace('o:', '') || '';
+        const currentDest = selectedKeys.find((k: string) => k.startsWith('d:'))?.replace('d:', '') || '';
+        return (
+          <div className="p-3 w-64 flex flex-col gap-3">
+            <div>
+              <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><PlaneTakeoff size={12} /> {t('common.origin')}</div>
+              <Select className="w-full" placeholder={t('common.all')} allowClear
+                value={currentOrigin || undefined}
+                options={origins.map(o => ({ label: o, value: o }))}
+                onChange={(val) => {
+                  const newKeys = selectedKeys.filter((k: string) => !k.startsWith('o:'));
+                  if (val) newKeys.push(`o:${val}`);
+                  setSelectedKeys(newKeys);
+                }} />
+            </div>
+            <div>
+              <div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><PlaneLanding size={12} /> {t('common.destination')}</div>
+              <Select className="w-full" placeholder={t('common.all')} allowClear
+                value={currentDest || undefined}
+                options={destinations.map(d => ({ label: d, value: d }))}
+                onChange={(val) => {
+                  const newKeys = selectedKeys.filter((k: string) => !k.startsWith('d:'));
+                  if (val) newKeys.push(`d:${val}`);
+                  setSelectedKeys(newKeys);
+                }} />
+            </div>
+            <div className="flex justify-between mt-2">
+              <Button size="small" onClick={() => { if (clearFilters) clearFilters(); confirm(); }} className="text-xs">{t('common.cancel')}</Button>
+              <Button type="primary" size="small" onClick={() => confirm()} className="text-xs bg-blue-600">{t('common.confirm')}</Button>
+            </div>
+          </div>
+        );
+      },
+      filterIcon: (filtered: boolean) => (
+        <div className="flex flex-col -space-y-1 items-center">
+          <PlaneTakeoff size={12} className={filtered ? 'text-blue-500' : 'text-slate-400'} />
+          <PlaneLanding size={12} className={filtered ? 'text-blue-500' : 'text-slate-400'} />
+        </div>
+      ),
+      onFilter: (value: any, record: MAWB) => {
+        const val = value as string;
+        if (val.startsWith('o:')) return record.origin === val.replace('o:', '');
+        if (val.startsWith('d:')) return record.destination === val.replace('d:', '');
+        return true;
+      }
+    },
+    {
+      title: 'Flight',
+      render: (_: any, r: MAWB) => (
+        <div className="text-xs">
+          <div className="text-slate-700 font-bold">{r.carrier || '--'}</div>
+          <div className="text-slate-400">{r.flightDate ? dayjs(r.flightDate).format('MM-DD') : '--'}</div>
+        </div>
+      ),
     },
     {
       title: t('common.status'),
       dataIndex: 'status',
+      filters: MAWB_STATUSES.map(s => ({ text: t(s.labelKey), value: s.value })),
+      onFilter: (value: any, record: MAWB) => record.status === value,
       render: (status: MawbStatus) => {
         const s = MAWB_STATUSES.find(x => x.value === status);
         return <Tag color={s?.color}>{t(s?.labelKey || status)}</Tag>;
@@ -338,6 +454,35 @@ export const MawbList: React.FC = () => {
           {r.pieces || 0} PCS / {r.weight || 0} KG
         </div>
       ),
+    },
+    {
+      title: t('operation.docs') || 'Docs',
+      width: 150,
+      render: (_: any, r: MAWB) => {
+        const b = allBookings.find(bk => bk.mawbNo === r.mawbNo);
+        const hasManifest = !!b?.manifestFileUrl;
+        const hasDraft = !!r.draftFileUrl;
+        return (
+          <Space size="small" wrap>
+            <Button size="small" icon={<Package size={12} />}
+              className={(hasManifest ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-[11px]'}
+              onClick={() => {
+                if (hasManifest && b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
+                else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
+              }}>
+              {t('common.upload')||'Man'}
+            </Button>
+            <Button size="small" icon={<FileText size={12} />}
+              className={(hasDraft ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-[11px]'}
+              onClick={() => {
+                if (hasDraft && r.draftFileUrl) triggerDownload(r.draftFileUrl);
+                else { setDraftTarget(r); setDraftModalOpen(true); }
+              }}>
+              {t('operation.steps.draft')||'Draft'}
+            </Button>
+          </Space>
+        );
+      },
     },
     {
       title: t('common.actions'),
@@ -375,10 +520,22 @@ export const MawbList: React.FC = () => {
         </span>
       ),
     },
-    { title: t('common.customer'), dataIndex: 'customerName' },
     {
-      title: t('common.route') || 'Route',
+      title: t('common.customer'),
+      render: (_: any, r: Booking) => customers.find(c => c.id === r.customerId)?.name || r.customerName || '--',
+    },
+    {
+      title: <RouteHeader />,
       render: (_: any, r: Booking) => <Tag color="geekblue">{r.origin} → {r.destination}</Tag>,
+    },
+    {
+      title: 'Flight',
+      render: (_: any, r: Booking) => (
+        <div className="text-xs">
+          <div className="text-slate-700 font-bold">{r.carrier || '--'}</div>
+          <div className="text-slate-400">{r.flightDate ? dayjs(r.flightDate).format('MM-DD') : '--'}</div>
+        </div>
+      ),
     },
     {
       title: t('common.cargo') || 'Cargo',
@@ -392,6 +549,12 @@ export const MawbList: React.FC = () => {
     {
       title: t('common.status'),
       dataIndex: 'status',
+      filters: [
+        { text: t('booking.status.pending'), value: 'pending' },
+        { text: t('booking.status.space_confirmed'), value: 'space_confirmed' },
+        { text: t('booking.status.client_accepted'), value: 'client_accepted' },
+      ],
+      onFilter: (value: any, r: Booking) => r.status === value,
       render: (s: string) => {
         const colors: Record<string, string> = { pending: 'orange', space_confirmed: 'green', client_accepted: 'blue' };
         return <Tag color={colors[s] || 'default'}>{t(`booking.status.${s}`)}</Tag>;
@@ -440,13 +603,31 @@ export const MawbList: React.FC = () => {
       title: 'MAWB',
       render: (_: any, r: Booking) => <span className="font-mono text-blue-500 font-bold">{r.mawbNo || '--'}</span>,
     },
-    { title: t('common.customer'), dataIndex: 'customerName' },
     {
-      title: t('common.route') || 'Route',
+      title: t('common.customer'),
+      render: (_: any, r: Booking) => customers.find(c => c.id === r.customerId)?.name || r.customerName || '--',
+    },
+    {
+      title: <RouteHeader />,
       render: (_: any, r: Booking) => <Tag>{r.origin} → {r.destination}</Tag>,
     },
     {
+      title: 'Flight',
+      render: (_: any, r: Booking) => (
+        <div className="text-xs">
+          <div className="text-slate-700 font-bold">{r.carrier || '--'}</div>
+          <div className="text-slate-400">{r.flightDate ? dayjs(r.flightDate).format('MM-DD') : '--'}</div>
+        </div>
+      ),
+    },
+    {
       title: t('common.status'),
+      filters: MAWB_STATUSES.map(s => ({ text: t(s.labelKey), value: s.value })),
+      onFilter: (value: any, r: Booking) => {
+        const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
+        const s = mawb?.status || r.status;
+        return s === value;
+      },
       render: (_: any, r: Booking) => {
         const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
         const s = mawb?.status || r.status;
@@ -461,7 +642,7 @@ export const MawbList: React.FC = () => {
       key: 'active',
       label: (<Badge count={activeMawbCount} size="small" offset={[6, 0]}><span className="px-2">{t('operation.activeShipments')}</span></Badge>),
       children: (
-        <Table dataSource={filteredMawbs} loading={loading} rowKey="id" columns={mawbColumns}
+        <Table dataSource={sortedMawbs} loading={loading} rowKey="id" columns={mawbColumns}
           pagination={{ pageSize: 15 }} />
       ),
     },
@@ -469,7 +650,7 @@ export const MawbList: React.FC = () => {
       key: 'bookings',
       label: (<Badge count={pendingBookings.length} size="small" offset={[6, 0]} color="#faad14"><span className="px-2">{t('operation.newRequests')}</span></Badge>),
       children: (
-        <Table dataSource={pendingBookings} loading={loading} rowKey="id" columns={pendingCols}
+        <Table dataSource={sortedPending} loading={loading} rowKey="id" columns={pendingCols}
           pagination={{ pageSize: 15 }} />
       ),
     },
@@ -477,7 +658,7 @@ export const MawbList: React.FC = () => {
       key: 'finished',
       label: (<Badge count={finishedBookings.length} size="small" offset={[6, 0]} color="#87d068"><span className="px-2">{t('operation.finishedRequests')}</span></Badge>),
       children: (
-        <Table dataSource={finishedBookings} loading={loading} rowKey="id" columns={finishedCols}
+        <Table dataSource={sortedFinished} loading={loading} rowKey="id" columns={finishedCols}
           pagination={{ pageSize: 15 }} />
       ),
     },
@@ -485,13 +666,13 @@ export const MawbList: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div style={{ whiteSpace: 'nowrap' }}>
           <Title level={2} className="mb-0">{t('operation.title')}</Title>
           <Text type="secondary">{t('operation.subtitle')}</Text>
         </div>
         <Input prefix={<Search size={16} className="text-slate-400" />}
-          placeholder={t('common.searchMawb')} className="w-64"
+          placeholder={t('common.searchMawb')} className="w-48"
           onChange={e => setSearchText(e.target.value)} />
       </div>
 
@@ -640,7 +821,7 @@ export const MawbList: React.FC = () => {
 
       {/* MAWB Detail Drawer */}
       <Drawer title={`${t('operation.mawbRef')}: ${selectedMawb?.mawbNo}`}
-        open={drawerOpen} onClose={() => setDrawerOpen(false)} width={450}>
+        open={drawerOpen} onClose={() => setDrawerOpen(false)} width={600}>
         {selectedMawb && (
           <div className="space-y-4">
             <Card size="small" className="bg-slate-50">
@@ -662,6 +843,36 @@ export const MawbList: React.FC = () => {
                 <div>{selectedMawb.remarks}</div>
               </div>
             )}
+            <Divider orientation="left">{t('operation.docs') || 'Docs'}</Divider>
+            <div className="flex gap-3">
+              {(() => {
+                const b = allBookings.find(bk => bk.mawbNo === selectedMawb.mawbNo);
+                return (
+                  <>
+                    <Button size="small" icon={<Package size={14} />}
+                      className={b?.manifestFileUrl ? 'text-blue-600' : 'text-red-500'}
+                      onClick={() => {
+                        if (b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
+                        else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
+                      }}>
+                      {t('common.upload')||'Manifest'}
+                    </Button>
+                    <Button size="small" icon={<FileText size={14} />}
+                      className={selectedMawb.draftFileUrl ? 'text-blue-600' : 'text-red-500'}
+                      onClick={() => {
+                        if (selectedMawb.draftFileUrl) triggerDownload(selectedMawb.draftFileUrl);
+                        else { setDraftTarget(selectedMawb); setDraftModalOpen(true); }
+                      }}>
+                      {t('operation.steps.draft')||'Draft'}
+                    </Button>
+                  </>
+                );
+              })()}
+            </div>
+            <Divider orientation="left" className="text-blue-600 font-bold">
+              <Space><Activity size={16} /> 17TRACK {t('operation.tracking')}</Space>
+            </Divider>
+            <MawbTrackingTable mawbNo={selectedMawb.mawbNo} />
           </div>
         )}
       </Drawer>

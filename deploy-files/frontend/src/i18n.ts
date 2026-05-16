@@ -228,12 +228,38 @@ const resources = {
         addDim: "Add Dimension",
         setConfirmed: "Confirm Space",
         uploadDraftDesc: "Upload the draft MAWB PDF for customer confirmation",
+        viewTrackingInternal: "View internal tracking",
+        manualQuery: "Query on 17TRACK",
         steps: {
           warehouse: "Warehouse Entry",
           draft: "MAWB Draft",
           customs: "Customs",
           terminal: "Terminal In",
           tracking: "Depart / Arrive"
+        }
+      },
+      tracking: {
+        title: "Tracking",
+        time: "Time",
+        status: "Status",
+        details: "Details",
+        location: "Location",
+        flightNo: "Flight",
+        pieces: "Pcs",
+        weight: "Weight",
+        refresh: "Refresh",
+        noLogs: "No tracking logs yet",
+        statuses: {
+          BKD: "Booked",
+          RCF: "Received",
+          DEP: "Departed",
+          ARR: "Arrived",
+          DLV: "Delivered",
+          MAN: "Manifest",
+          AWB: "AWB Issued",
+          TFD: "Transferred",
+          RCS: "Accepted",
+          DIS: "Discrepancy"
         }
       },
       finance: {
@@ -528,7 +554,7 @@ const resources = {
         setTerminalIn: "分拨理货",
         exception: "异常",
         financeSettlement: "财务结算",
-        activeShipments: "进行中空运",
+        activeShipments: "操作中主单",
         newRequests: "新订舱请求",
         finishedRequests: "已完成运单",
         mawbRef: "主单编号",
@@ -538,12 +564,38 @@ const resources = {
         addDim: "新增尺寸",
         setConfirmed: "确认舱位",
         uploadDraftDesc: "上传主单草稿PDF供客户确认",
+        viewTrackingInternal: "查看内部追踪",
+        manualQuery: "在17TRACK查询",
         steps: {
           warehouse: "入库操作",
           draft: "主单草单",
           customs: "报关",
           terminal: "分拨理货",
           tracking: "起飞/到达"
+        }
+      },
+      tracking: {
+        title: "追踪信息",
+        time: "时间",
+        status: "状态",
+        details: "详情",
+        location: "地点",
+        flightNo: "航班",
+        pieces: "件数",
+        weight: "重量",
+        refresh: "刷新",
+        noLogs: "暂无追踪记录",
+        statuses: {
+          BKD: "已订舱",
+          RCF: "已揽收",
+          DEP: "已起飞",
+          ARR: "已到达",
+          DLV: "已签收",
+          MAN: "舱单信息",
+          AWB: "运单已出",
+          TFD: "转运中",
+          RCS: "已收货",
+          DIS: "异常"
         }
       },
       finance: {

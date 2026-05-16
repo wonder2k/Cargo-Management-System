@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { FilePlus, Package, ChevronRight, Printer, CheckCircle2, Pause, ExternalLink, FileText } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
-import { businessApi, operationApi } from '../../services/api';
+import { businessApi, operationApi, uploadApi } from '../../services/api';
 
 const { Text, Title } = Typography;
 
@@ -34,10 +34,12 @@ export const BookingList: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rates, setRates] = useState<FlightRate[]>([]);
-  const [mawbs, setMawbs] = useState<MAWB[]>([]); 
+  const [mawbs, setMawbs] = useState<MAWB[]>([]);
   const [loading, setLoading] = useState(false);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [manifestModalOpen, setManifestModalOpen] = useState(false);
+  const [manifestTarget, setManifestTarget] = useState<Booking | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<Booking | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -57,7 +59,7 @@ export const BookingList: React.FC = () => {
         businessApi.getRates(),
         operationApi.getMawbs()
       ]);
-      
+
       setBookings(bookRes.data);
       setCustomers(custRes.data);
       setRates(rateRes.data);
@@ -76,6 +78,7 @@ export const BookingList: React.FC = () => {
   const handleCreate = async (values: any) => {
     const rate = rates.find(r => r.id === values.rateId);
     if (!rate) return;
+    const customer = customers.find(c => c.id === values.customerId);
 
     try {
       await businessApi.createBooking({
@@ -85,6 +88,7 @@ export const BookingList: React.FC = () => {
         carrier: rate.carrier,
         flightNo: rate.flightNo,
         flightDate: values.flightDate.toISOString(),
+        customerName: customer?.name || '',
       });
       message.success(t('common.success'));
       setNewModalOpen(false);
@@ -110,6 +114,36 @@ export const BookingList: React.FC = () => {
     }
   };
 
+  const triggerDownload = (fileName: string) => {
+    if (fileName?.startsWith('http')) {
+      window.open(fileName, '_blank');
+    } else {
+      const blob = new Blob(['Mock file: ' + fileName], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleUploadManifest = async (file: File) => {
+    if (!manifestTarget) return false;
+    try {
+      const res = await uploadApi.uploadFile(file);
+      await businessApi.updateBooking(manifestTarget.id, {
+        manifestFileUrl: res.data.fileUrl,
+        manifestFileName: res.data.fileName,
+      });
+      message.success('Manifest uploaded');
+      setManifestModalOpen(false);
+      setManifestTarget(null);
+      fetchData();
+    } catch { message.error('Upload failed'); }
+    return false;
+  };
+
   const getStatusTag = (status: BookingStatus | MawbStatus) => {
     const config = MAWB_STATUSES.find(x => x.value === status);
     return <Tag color={config?.color || 'default'}>{t(config?.labelKey || status)}</Tag>;
@@ -117,7 +151,7 @@ export const BookingList: React.FC = () => {
 
   const handleBookingAction = async (id: string | number, newStatus: BookingStatus, extraData: any = {}) => {
     try {
-      await businessApi.updateBooking(id, { 
+      await businessApi.updateBooking(id, {
         status: newStatus,
         ...extraData
       });
@@ -135,10 +169,10 @@ export const BookingList: React.FC = () => {
           <Title level={2} className="mb-0">{t('common.bookings')}</Title>
           <Text type="secondary">{t('bookings.subtitle')}</Text>
         </div>
-        <Button 
-          type="primary" 
-          size="large" 
-          icon={<FilePlus size={18} />} 
+        <Button
+          type="primary"
+          size="large"
+          icon={<FilePlus size={18} />}
           onClick={async () => {
             try {
               const [custRes, rateRes] = await Promise.all([businessApi.getCustomers(), businessApi.getRates()]);
@@ -152,22 +186,27 @@ export const BookingList: React.FC = () => {
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm">
-        <Table 
-          dataSource={bookings} 
-          loading={loading} 
+        <Table
+          dataSource={bookings}
+          loading={loading}
           rowKey="id"
           columns={[
-            { 
-              title: t('quotes.quoteNo') || 'No', 
+            {
+              title: t('quotes.quoteNo') || 'No',
               render: (r: Booking) => (
                 <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }}>
                   <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
                   <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
+                  {r.mawbNo && (
+                    <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
+                      {r.mawbNo} <ExternalLink size={10} />
+                    </span>
+                  )}
                 </div>
               )
             },
-            { 
-              title: 'Route', 
+            {
+              title: 'Route',
               render: (r: Booking) => (
                 <div className="flex items-center gap-2">
                   <Badge count={r.carrier} color="#1d4ed8" />
@@ -178,8 +217,8 @@ export const BookingList: React.FC = () => {
                 </div>
               )
             },
-            { 
-              title: 'Cargo', 
+            {
+              title: 'Cargo',
               render: (r: Booking) => (
                 <div className="text-xs">
                   <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
@@ -187,18 +226,26 @@ export const BookingList: React.FC = () => {
                 </div>
               )
             },
-            { 
-              title: t('common.status'), 
+            {
+              title: t('common.status'),
               render: (r: Booking) => getStatusTag(r.status)
             },
-            { 
-              title: t('common.actions'), 
+            {
+              title: t('common.actions'),
               align: 'right',
               render: (r: Booking) => (
                 <Space>
                   {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
                     <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
                   )}
+                  <Button size="small" icon={<FileText size={12} />}
+                    className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
+                    onClick={() => {
+                      if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+                      else { setManifestTarget(r); setManifestModalOpen(true); }
+                    }}>
+                    {t('common.upload')||'Man'}
+                  </Button>
                   {r.status === 'finalized' && (
                     <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
                   )}
@@ -239,15 +286,15 @@ export const BookingList: React.FC = () => {
                 <DatePicker className="w-full"
                   disabledDate={(current) => {
                     if (!rateSchedule || !current) return false;
-                    const dow = current.day(); // 0=Sun, 1=Mon...
+                    const dow = current.day();
                     const schedDays = rateSchedule.split(',').map(Number);
-                    const jsDay = dow === 0 ? 7 : dow; // convert Sun=0 → Sun=7
+                    const jsDay = dow === 0 ? 7 : dow;
                     return !schedDays.includes(jsDay);
                   }} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="declarationMethod" label={t('common.declaration')||'Declaration'} rules={[{ required: true }]}>
+              <Form.Item name="declarationMethod" label={t('bookings.declaration')||'Declaration'} rules={[{ required: true }]}>
                 <Select options={[
                   { label: t('bookings.declarationMethods.formal')||'Formal', value: 'formal' },
                   { label: '9610', value: '9610' },
@@ -285,6 +332,20 @@ export const BookingList: React.FC = () => {
         </Form>
       </Modal>
 
+      <Modal title={t('common.upload')+' Manifest'} open={manifestModalOpen}
+        onCancel={() => { setManifestModalOpen(false); setManifestTarget(null); }}
+        footer={null} destroyOnClose>
+        <div className="py-4">
+          <Upload.Dragger accept=".xlsx,.xls,.pdf"
+            beforeUpload={(file) => handleUploadManifest(file)}
+            showUploadList={false}>
+            <p className="text-4xl mb-2 text-slate-300"><FileText size={32} /></p>
+            <p className="text-sm font-medium">Click or drag manifest file here</p>
+            <p className="text-xs text-slate-400 mt-1">Excel (.xlsx) or PDF format, max 10MB</p>
+          </Upload.Dragger>
+        </div>
+      </Modal>
+
       <Drawer
          title={<span className="font-mono">{selectedBookingDetail?.bookingNo}</span>}
          open={detailDrawerOpen}
@@ -306,6 +367,15 @@ export const BookingList: React.FC = () => {
                <Col span={8}><Statistic title="Weight" value={selectedBookingDetail.weight} suffix="KG" /></Col>
                <Col span={8}><Statistic title="Volume" value={selectedBookingDetail.volume} suffix="CBM" /></Col>
              </Row>
+             {selectedBookingDetail.manifestFileUrl && (
+               <>
+                 <Divider orientation="left">{t('operation.docs')||'Docs'}</Divider>
+                 <Button size="small" icon={<FileText size={14} />}
+                   className="text-blue-600" onClick={() => triggerDownload(selectedBookingDetail.manifestFileUrl!)}>
+                   {t('common.download')||'Manifest'}
+                 </Button>
+               </>
+             )}
            </div>
          )}
        </Drawer>
