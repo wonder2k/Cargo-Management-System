@@ -407,20 +407,26 @@ export const PricingList: React.FC = () => {
           <Row gutter={16}>
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'} getValueFromEvent={(val) => (val||[]).sort().join(',')} getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
-               <Checkbox.Group style={{ display: 'flex', gap: 6 }} options={[
-                 { label: '1', value: 1 },
-                 { label: '2', value: 2 },
-                 { label: '3', value: 3 },
-                 { label: '4', value: 4 },
-                 { label: '5', value: 5 },
-                 { label: '6', value: 6 },
-                 { label: '7', value: 7 },
-               ]} />
-             </Form.Item>
-             <div className="text-[10px] text-slate-400 mt-1">1=周一 2=周二 3=周三 4=周四 5=周五 6=周六 7=周日</div>
-             </Col>
-             <Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
+             <Col span={6}>
+               <style>{`.sched-wrap .ant-checkbox-group-item:nth-child(7){flex:0 0 100%}`}</style>
+               <Form.Item name="schedule"
+                 label={<div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',width:'100%',gap:8}}>
+                   <span>{t('pricing.schedule')||'Schedule'}</span>
+                   <span style={{fontSize:10,color:'#94a3b8',whiteSpace:'nowrap',lineHeight:'22px'}}>1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun</span>
+                 </div>}
+                 getValueFromEvent={(val) => (val||[]).sort().join(',')}
+                 getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
+                 <div className="sched-wrap">
+                   <Checkbox.Group style={{display:'flex',flexWrap:'wrap',gap:'2px 6px',maxWidth:400}}
+                     options={[
+                       { label: '1', value: 1 }, { label: '2', value: 2 },
+                       { label: '3', value: 3 }, { label: '4', value: 4 },
+                       { label: '5', value: 5 }, { label: '6', value: 6 },
+                       { label: '7', value: 7 },
+                     ]} />
+                 </div>
+               </Form.Item>
+             </Col><Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
              <Col span={6}><Form.Item name="baseFreight" label="Base Price (/KG)" rules={[{ required: true }]}><InputNumber className="w-full" min={0} precision={2} /></Form.Item></Col>
