@@ -229,6 +229,7 @@ const resources = {
         setConfirmed: "Confirm Space",
         uploadDraftDesc: "Upload the draft MAWB PDF for customer confirmation",
         viewTrackingInternal: "View internal tracking",
+        docs: "Docs",
         manualQuery: "Query on 17TRACK",
         steps: {
           warehouse: "Warehouse Entry",
@@ -564,6 +565,7 @@ const resources = {
         addDim: "新增尺寸",
         setConfirmed: "确认舱位",
         uploadDraftDesc: "上传主单草稿PDF供客户确认",
+        docs: "文件",
         viewTrackingInternal: "查看内部追踪",
         manualQuery: "在17TRACK查询",
         steps: {

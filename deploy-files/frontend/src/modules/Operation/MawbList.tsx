@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider, DatePicker, Upload, Tooltip } from 'antd';
 import { MAWB, MawbStatus, Booking, Customer } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Plane, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity } from 'lucide-react';
+import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { operationApi, businessApi, uploadApi } from '../../services/api';
@@ -31,8 +31,6 @@ export const MawbList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('active');
-  const [routeSortField, setRouteSortField] = useState<'origin' | 'destination' | null>(null);
-  const [routeSortOrder, setRouteSortOrder] = useState<'ascend' | 'descend'>('ascend');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedMawb, setSelectedMawb] = useState<MAWB | null>(null);
@@ -327,41 +325,8 @@ export const MawbList: React.FC = () => {
     }
   };
 
-  // Route sort helpers
-  const handleRouteSort = (field: 'origin' | 'destination') => {
-    if (routeSortField === field) {
-      setRouteSortOrder(prev => prev === 'ascend' ? 'descend' : 'ascend');
-    } else {
-      setRouteSortField(field);
-      setRouteSortOrder('ascend');
-    }
-  };
-  const sortedMawbs = !routeSortField ? filteredMawbs : [...filteredMawbs].sort((a, b) => {
-    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
-    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
-  });
-  const sortedPending = !routeSortField ? pendingBookings : [...pendingBookings].sort((a, b) => {
-    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
-    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
-  });
-  const sortedFinished = !routeSortField ? finishedBookings : [...finishedBookings].sort((a, b) => {
-    const aV = (a[routeSortField] || '').toLowerCase(), bV = (b[routeSortField] || '').toLowerCase();
-    return routeSortOrder === 'ascend' ? aV.localeCompare(bV) : bV.localeCompare(aV);
-  });
-
-  const RouteHeader = () => (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      <span>{t('common.route')}</span>
-      <div style={{ display: 'inline-flex', gap: 1 }}>
-        <Plane size={10} className={`cursor-pointer ${routeSortField === 'origin' ? 'text-blue-500' : 'text-slate-300'}`}
-          style={{ transform: 'rotate(-90deg)' }} onClick={() => handleRouteSort('origin')} />
-        <Plane size={10} className={`cursor-pointer ${routeSortField === 'destination' ? 'text-blue-500' : 'text-slate-300'}`}
-          style={{ transform: 'rotate(90deg)' }} onClick={() => handleRouteSort('destination')} />
-      </div>
-    </div>
-  );
-
   // ==== MAWB List Columns ====
+  const RouteTitle = t('common.route');
   const mawbColumns = [
     {
       title: t('operation.mawbRef'),
@@ -377,7 +342,7 @@ export const MawbList: React.FC = () => {
       ),
     },
     {
-      title: <RouteHeader />,
+      title: RouteTitle,
       render: (_: any, r: MAWB) => <Tag color="blue">{r.origin} → {r.destination}</Tag>,
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => {
         const origins = Array.from(new Set(mawbs.map(m => m.origin))).sort();
@@ -525,7 +490,7 @@ export const MawbList: React.FC = () => {
       render: (_: any, r: Booking) => customers.find(c => c.id === r.customerId)?.name || r.customerName || '--',
     },
     {
-      title: <RouteHeader />,
+      title: RouteTitle,
       render: (_: any, r: Booking) => <Tag color="geekblue">{r.origin} → {r.destination}</Tag>,
     },
     {
@@ -608,7 +573,7 @@ export const MawbList: React.FC = () => {
       render: (_: any, r: Booking) => customers.find(c => c.id === r.customerId)?.name || r.customerName || '--',
     },
     {
-      title: <RouteHeader />,
+      title: RouteTitle,
       render: (_: any, r: Booking) => <Tag>{r.origin} → {r.destination}</Tag>,
     },
     {
@@ -642,7 +607,7 @@ export const MawbList: React.FC = () => {
       key: 'active',
       label: (<Badge count={activeMawbCount} size="small" offset={[6, 0]}><span className="px-2">{t('operation.activeShipments')}</span></Badge>),
       children: (
-        <Table dataSource={sortedMawbs} loading={loading} rowKey="id" columns={mawbColumns}
+        <Table dataSource={filteredMawbs} loading={loading} rowKey="id" columns={mawbColumns}
           pagination={{ pageSize: 15 }} />
       ),
     },
@@ -650,7 +615,7 @@ export const MawbList: React.FC = () => {
       key: 'bookings',
       label: (<Badge count={pendingBookings.length} size="small" offset={[6, 0]} color="#faad14"><span className="px-2">{t('operation.newRequests')}</span></Badge>),
       children: (
-        <Table dataSource={sortedPending} loading={loading} rowKey="id" columns={pendingCols}
+        <Table dataSource={pendingBookings} loading={loading} rowKey="id" columns={pendingCols}
           pagination={{ pageSize: 15 }} />
       ),
     },
@@ -658,7 +623,7 @@ export const MawbList: React.FC = () => {
       key: 'finished',
       label: (<Badge count={finishedBookings.length} size="small" offset={[6, 0]} color="#87d068"><span className="px-2">{t('operation.finishedRequests')}</span></Badge>),
       children: (
-        <Table dataSource={sortedFinished} loading={loading} rowKey="id" columns={finishedCols}
+        <Table dataSource={finishedBookings} loading={loading} rowKey="id" columns={finishedCols}
           pagination={{ pageSize: 15 }} />
       ),
     },

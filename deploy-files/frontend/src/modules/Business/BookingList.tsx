@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tabs } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { FilePlus, Package, ChevronRight, Printer, CheckCircle2, Pause, ExternalLink, FileText } from 'lucide-react';
@@ -36,6 +36,7 @@ export const BookingList: React.FC = () => {
   const [rates, setRates] = useState<FlightRate[]>([]);
   const [mawbs, setMawbs] = useState<MAWB[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [manifestModalOpen, setManifestModalOpen] = useState(false);
@@ -162,6 +163,75 @@ export const BookingList: React.FC = () => {
     }
   };
 
+  const pendingActionBookings = bookings.filter(b =>
+    (b.status === 'pre_booked' || b.status === 'space_confirmed') || !b.manifestFileUrl
+  );
+  const finalizedBookings = bookings.filter(b => b.status === 'finalized');
+
+  const columns = [
+    {
+      title: t('quotes.quoteNo') || 'No',
+      render: (r: Booking) => (
+        <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }}>
+          <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
+          <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
+          {r.mawbNo && (
+            <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
+              {r.mawbNo} <ExternalLink size={10} />
+            </span>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Route',
+      render: (r: Booking) => (
+        <div className="flex items-center gap-2">
+          <Badge count={r.carrier} color="#1d4ed8" />
+          <div className="flex flex-col">
+            <span className="text-sm font-bold">{r.origin} → {r.destination}</span>
+            <span className="text-[10px] text-slate-400">ETD: {dayjs(r.flightDate).format('MM-DD')}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Cargo',
+      render: (r: Booking) => (
+        <div className="text-xs">
+          <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
+          <div className="text-slate-400 truncate w-32">{r.goodsDescription}</div>
+        </div>
+      )
+    },
+    {
+      title: t('common.status'),
+      render: (r: Booking) => getStatusTag(r.status)
+    },
+    {
+      title: t('common.actions'),
+      align: 'right' as const,
+      render: (r: Booking) => (
+        <Space>
+          {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
+            <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
+          )}
+          <Button size="small" icon={<FileText size={12} />}
+            className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
+            onClick={() => {
+              if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+              else { setManifestTarget(r); setManifestModalOpen(true); }
+            }}>
+            {t('common.upload')||'Man'}
+          </Button>
+          {r.status === 'finalized' && (
+            <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
+          )}
+        </Space>
+      )
+    }
+  ];
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -185,75 +255,24 @@ export const BookingList: React.FC = () => {
         </Button>
       </div>
 
-      <div className="bg-white border rounded-xl shadow-sm">
-        <Table
-          dataSource={bookings}
-          loading={loading}
-          rowKey="id"
-          columns={[
-            {
-              title: t('quotes.quoteNo') || 'No',
-              render: (r: Booking) => (
-                <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }}>
-                  <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
-                  <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
-                  {r.mawbNo && (
-                    <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
-                      {r.mawbNo} <ExternalLink size={10} />
-                    </span>
-                  )}
-                </div>
-              )
-            },
-            {
-              title: 'Route',
-              render: (r: Booking) => (
-                <div className="flex items-center gap-2">
-                  <Badge count={r.carrier} color="#1d4ed8" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold">{r.origin} → {r.destination}</span>
-                    <span className="text-[10px] text-slate-400">ETD: {dayjs(r.flightDate).format('MM-DD')}</span>
-                  </div>
-                </div>
-              )
-            },
-            {
-              title: 'Cargo',
-              render: (r: Booking) => (
-                <div className="text-xs">
-                  <div className="font-medium text-slate-700">{r.pieces} PCS / {r.weight} KGS</div>
-                  <div className="text-slate-400 truncate w-32">{r.goodsDescription}</div>
-                </div>
-              )
-            },
-            {
-              title: t('common.status'),
-              render: (r: Booking) => getStatusTag(r.status)
-            },
-            {
-              title: t('common.actions'),
-              align: 'right',
-              render: (r: Booking) => (
-                <Space>
-                  {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
-                    <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
-                  )}
-                  <Button size="small" icon={<FileText size={12} />}
-                    className={(r.manifestFileUrl ? 'text-blue-600 border-blue-600' : 'text-red-500 border-red-500') + ' text-xs'}
-                    onClick={() => {
-                      if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
-                      else { setManifestTarget(r); setManifestModalOpen(true); }
-                    }}>
-                    {t('common.upload')||'Man'}
-                  </Button>
-                  {r.status === 'finalized' && (
-                    <Button size="small" icon={<Printer size={14} />} onClick={() => PDFService.generateBookingOrder(r, undefined, profile)} />
-                  )}
-                </Space>
-              )
-            }
-          ]}
-        />
+      <div className="bg-white border rounded-xl shadow-sm p-4">
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
+          {
+            key: 'all',
+            label: <Badge count={bookings.length} size="small" offset={[6, 0]}><span className="px-2">{t('common.all')}</span></Badge>,
+            children: <Table dataSource={bookings} loading={loading} rowKey="id" columns={columns} pagination={{ pageSize: 15 }} />,
+          },
+          {
+            key: 'pending',
+            label: <Badge count={pendingActionBookings.length} size="small" offset={[6, 0]} color="#faad14"><span className="px-2">{t('common.submit')}</span></Badge>,
+            children: <Table dataSource={pendingActionBookings} loading={loading} rowKey="id" columns={columns} pagination={{ pageSize: 15 }} />,
+          },
+          {
+            key: 'finalized',
+            label: <Badge count={finalizedBookings.length} size="small" offset={[6, 0]} color="#87d068"><span className="px-2">{t('booking.status.finalized')}</span></Badge>,
+            children: <Table dataSource={finalizedBookings} loading={loading} rowKey="id" columns={columns} pagination={{ pageSize: 15 }} />,
+          },
+        ]} />
       </div>
 
       <Modal
@@ -334,7 +353,7 @@ export const BookingList: React.FC = () => {
 
       <Modal title={t('common.upload')+' Manifest'} open={manifestModalOpen}
         onCancel={() => { setManifestModalOpen(false); setManifestTarget(null); }}
-        footer={null} destroyOnClose>
+        footer={null}>
         <div className="py-4">
           <Upload.Dragger accept=".xlsx,.xls,.pdf"
             beforeUpload={(file) => handleUploadManifest(file)}
