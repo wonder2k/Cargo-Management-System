@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Badge, Alert, Popover } from 'antd';
+import { Table, Button, Card, Tag, Modal, Form, Input, Select, InputNumber, App, Space, Typography, Row, Col, Badge, Alert, Popover, Checkbox } from 'antd';
 import { FlightRate, Customer } from '../../types';
 import { Plus, ChevronRight, FileText, Settings, Trash2, Edit2, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -407,18 +407,19 @@ export const PricingList: React.FC = () => {
           <Row gutter={16}>
              <Col span={6}><Form.Item name="flightNo" label={t('pricing.flightNo')||'Flight No'}><Input /></Form.Item></Col>
              <Col span={6}><Form.Item name="aircraftType" label={t('pricing.aircraft')||'Aircraft'}><Input /></Form.Item></Col>
-             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'} getValueFromEvent={(val) => val.join(',')} getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
-               <Select mode="multiple" placeholder={t('pricing.scheduleHint')||'Select flight days'}
-                 options={[
-                   { label: t('pricing.mon')||'Mon', value: 1 },
-                   { label: t('pricing.tue')||'Tue', value: 2 },
-                   { label: t('pricing.wed')||'Wed', value: 3 },
-                   { label: t('pricing.thu')||'Thu', value: 4 },
-                   { label: t('pricing.fri')||'Fri', value: 5 },
-                   { label: t('pricing.sat')||'Sat', value: 6 },
-                   { label: t('pricing.sun')||'Sun', value: 7 },
-                 ]} />
-             </Form.Item></Col>
+             <Col span={6}><Form.Item name="schedule" label={t('pricing.schedule')||'Schedule'} getValueFromEvent={(val) => (val||[]).sort().join(',')} getValueProps={(v) => ({ value: v ? v.split(',').filter(Boolean).map(Number) : [] })}>
+               <Checkbox.Group style={{ display: 'flex', gap: 6 }} options={[
+                 { label: '1', value: 1 },
+                 { label: '2', value: 2 },
+                 { label: '3', value: 3 },
+                 { label: '4', value: 4 },
+                 { label: '5', value: 5 },
+                 { label: '6', value: 6 },
+                 { label: '7', value: 7 },
+               ]} />
+             </Form.Item>
+             <div className="text-[10px] text-slate-400 mt-1">1=周一 2=周二 3=周三 4=周四 5=周五 6=周六 7=周日</div>
+             </Col>
              <Col span={6}><Form.Item name="currency" label={t('common.currency')||'Currency'} initialValue="CNY"><Select options={[{label:'CNY',value:'CNY'},{label:'USD',value:'USD'}]} /></Form.Item></Col>
           </Row>
           <Row gutter={16}>
