@@ -283,7 +283,7 @@ export const BookingList: React.FC = () => {
             align: 'right' as const,
             render: (r: Booking) => {
                 const mawbA = mawbs.find(m => m.mawbNo === r.mawbNo);
-                const hasException = mawbA?.remarks?.includes('Exception');
+                const hasException = mawbA?.remarks?.includes('Exception') || mawbA?.remarks?.includes('[Returned]');
                 return (
               <Space>
                 {hasException && (
@@ -364,9 +364,8 @@ export const BookingList: React.FC = () => {
               <Row gutter={[16, 16]}>
                 <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{selectedBookingDetail.customerName}</div></Col>
                 <Col span={12}><Text type="secondary">{t('common.status')}:</Text> <Tag>{t(`booking.status.${selectedBookingDetail.status}`)}</Tag></Col>
-                <Col span={12}><Text type="secondary">Route:</Text> <div className="font-bold">{selectedBookingDetail.origin} → {selectedBookingDetail.destination}</div></Col>
-                <Col span={12}><Text type="secondary">Flight:</Text> <div className="font-bold font-mono">{selectedBookingDetail.flightDate ? dayjs(selectedBookingDetail.flightDate).format('YYYY-MM-DD') : '--'} / {selectedBookingDetail.carrier || '--'}</div></Col>
-                <Col span={12}><Text type="secondary">MAWB:</Text> <span className="font-mono text-blue-600">{selectedBookingDetail.mawbNo || '--'}</span></Col>
+                <Col span={12}><Text type="secondary">Route:</Text> <div className="flex flex-col"><span className="font-bold">{selectedBookingDetail.origin} → {selectedBookingDetail.destination}</span><span className="text-[10px] text-slate-400">{selectedBookingDetail.flightDate ? dayjs(selectedBookingDetail.flightDate).format('YYYY-MM-DD') : '--'} / {selectedBookingDetail.carrier || '--'}</span></div></Col>
+                <Col span={12}><Text type="secondary">MAWB:</Text> <div className="flex flex-col"><span className="text-[10px] text-slate-400 font-bold">{t('operation.mawbRef')||'MAWB'}</span><span className="font-mono text-blue-600">{selectedBookingDetail.mawbNo || '--'}</span></div></Col>
                 <Col span={12}><Text type="secondary">{t('common.user')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPerson || (profile as any)?.name || '--'}</div></Col>
                 <Col span={12}><Text type="secondary">{t('common.phone')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPhone || '--'}</div></Col>
               </Row>
@@ -396,7 +395,7 @@ export const BookingList: React.FC = () => {
             <div id="booking-exceptions">
               {(() => {
                 const mawbX = mawbs.find(m => m.mawbNo === selectedBookingDetail.mawbNo);
-                if (!mawbX?.remarks || !mawbX.remarks.includes('Exception')) return null;
+                if (!mawbX?.remarks || (!mawbX.remarks.includes('Exception') && !mawbX.remarks.includes('[Returned]'))) return null;
                 return (
                   <div className="mb-4">
                     <Alert type="error" showIcon message={t('operation.exception')} description={mawbX.remarks.split('\n').filter((l) => l.includes('Exception')).join('\n')} />
