@@ -167,9 +167,11 @@ export const MawbList: React.FC = () => {
     if (!selectedMawb) return;
     const returnedText = (values.customsReturned || []).map((ri: any) => `[Customs Exception] ${ri.subMawb}: ${ri.reason} @ ${dayjs().format('YYYY-MM-DD HH:mm')}`).join('\n');
     try {
+      const existing = selectedMawb.remarks || '';
+      const newPart = [values.customsRemark || '', returnedText].filter(Boolean).join('\n');
       await operationApi.updateMawb(selectedMawb.id, {
         status: 'customs',
-        remarks: [values.customsRemark || '', returnedText].filter(Boolean).join('\n'),
+        remarks: [existing, newPart].filter(Boolean).join('\n'),
       });
       message.success(t('common.success'));
       setCustomsModalOpen(false);
@@ -184,10 +186,14 @@ export const MawbList: React.FC = () => {
     if (!selectedMawb) return;
     const returnedText = (values.terminalReturned || []).map((ri: any) => `[Terminal Security Exception] ${ri.subMawb}: ${ri.reason} @ ${dayjs().format('YYYY-MM-DD HH:mm')}`).join('\n');
     try {
+      const existing = selectedMawb.remarks || '';
+      const newPart = [values.terminalRemark || '', returnedText].filter(Boolean).join('\n');
       await operationApi.updateMawb(selectedMawb.id, {
         status: 'terminal_in',
-        remarks: [values.terminalRemark || '', returnedText].filter(Boolean).join('\n'),
+        remarks: [existing, newPart].filter(Boolean).join('\n'),
       });
+      // Auto-register with 17TRACK
+      try { fetch('/api/track/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: selectedMawb.mawbNo }) }); } catch {}
       message.success(t('common.success'));
       setTerminalModalOpen(false);
       fetchData();
