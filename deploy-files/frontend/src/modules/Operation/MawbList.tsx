@@ -568,15 +568,9 @@ export const MawbList: React.FC = () => {
     {
       title: t('common.bookingNo') || 'Booking',
       render: (_: any, r: Booking) => (
-        <div className="flex items-center gap-1">
-          <span className="font-mono font-bold text-blue-600 cursor-pointer"
-            onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
-            {r.bookingNo}
-          </span>
-          <span className="font-mono text-blue-500 font-bold text-[10px]">{r.mawbNo || '--'}</span>
-          {r.status === 'finalized' && (
-            <Printer size={12} className="text-blue-500 cursor-pointer" onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
-          )}
+        <div className="flex flex-col cursor-pointer" onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
+          <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
+          <span className="text-[10px] text-blue-500 font-mono font-bold">{r.mawbNo || '--'}</span>
         </div>
       ),
     },
@@ -608,16 +602,33 @@ export const MawbList: React.FC = () => {
     },
     {
       title: t('operation.docs') || 'Docs',
-      render: (_: any, r: Booking) => (
-        <Button size="small"
-          icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
-          onClick={() => {
-            if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
-            else { setManifestTarget(r); setManifestModalOpen(true); }
-          }}>
-          {t('operation.manifest')||'Manifest'}
-        </Button>
-      ),
+      render: (_: any, r: Booking) => {
+        const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <Button size="small"
+                icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
+                onClick={() => {
+                  if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+                  else { setManifestTarget(r); setManifestModalOpen(true); }
+                }}>
+                {t('operation.manifest')||'Manifest'}
+              </Button>
+              {r.status === 'finalized' && (
+                <Printer size={14} className="text-blue-500 cursor-pointer" onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
+              )}
+            </div>
+            {mawb?.draftFileUrl && (
+              <Button size="small"
+                icon={<FileText size={14} style={{ color: '#f97316' }} />}
+                onClick={() => triggerDownload(mawb.draftFileUrl!)}>
+                {t('operation.steps.draft')||'Draft'}
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: t('common.status'),
@@ -730,7 +741,7 @@ export const MawbList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="actualPieces" label="Actual PCS" rules={[{ required: true }]}>
+              <Form.Item name="actualPieces" label={t('common.pieces') || 'Actual PCS'} rules={[{ required: true }]}>
                 <InputNumber className="w-full" min={1} />
               </Form.Item>
             </Col>
@@ -741,18 +752,35 @@ export const MawbList: React.FC = () => {
                 <>
                   {fields.map(({ key, name, ...rest }) => (
                     <Row key={key} gutter={8} className="mb-2 items-center">
-                      <Col span={6}><Form.Item {...rest} name={[name, 'l']} noStyle rules={[{ required: true }]}><InputNumber placeholder="L" className="w-full" /></Form.Item></Col>
-                      <Col span={6}><Form.Item {...rest} name={[name, 'w']} noStyle rules={[{ required: true }]}><InputNumber placeholder="W" className="w-full" /></Form.Item></Col>
-                      <Col span={6}><Form.Item {...rest} name={[name, 'h']} noStyle rules={[{ required: true }]}><InputNumber placeholder="H" className="w-full" /></Form.Item></Col>
-                      <Col span={6}><Button danger type="link" onClick={() => remove(name)}>Remove</Button></Col>
+                      <Col span={6}>
+                        <Form.Item {...rest} name={[name, 'l']} noStyle rules={[{ required: true }]}>
+                          <InputNumber id={`dim_input_${name}_l`} placeholder="L" className="w-full"
+                            onKeyDown={(e) => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); add(); setTimeout(() => { const next = document.getElementById(`dim_input_${name + 1}_l`); if (next) { (next as HTMLInputElement).focus(); (next as HTMLInputElement).select(); } }, 100); } }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item {...rest} name={[name, 'w']} noStyle rules={[{ required: true }]}>
+                          <InputNumber id={`dim_input_${name}_w`} placeholder="W" className="w-full"
+                            onKeyDown={(e) => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); add(); setTimeout(() => { const next = document.getElementById(`dim_input_${name + 1}_l`); if (next) { (next as HTMLInputElement).focus(); (next as HTMLInputElement).select(); } }, 100); } }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item {...rest} name={[name, 'h']} noStyle rules={[{ required: true }]}>
+                          <InputNumber id={`dim_input_${name}_h`} placeholder="H" className="w-full"
+                            onKeyDown={(e) => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); add(); setTimeout(() => { const next = document.getElementById(`dim_input_${name + 1}_l`); if (next) { (next as HTMLInputElement).focus(); (next as HTMLInputElement).select(); } }, 100); } }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6} className="flex items-center"><Button onClick={() => remove(name)} type="link" danger className="px-0">{t('common.delete') || 'Remove'}</Button></Col>
                     </Row>
                   ))}
-                  <Button type="dashed" onClick={() => add()} block icon={<Plus size={14} />}>{t('operation.addDim')}</Button>
+                  <Tooltip title="Ctrl+Enter">
+                    <Button type="dashed" onClick={() => add()} block icon={<Plus size={14} />}>{t('operation.addDim')}</Button>
+                  </Tooltip>
                 </>
               )}
             </Form.List>
           </Form.Item>
-          <Form.Item name="remarks" label="Remarks"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="remarks" label={t('common.remarks') || 'Remarks'}><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
 

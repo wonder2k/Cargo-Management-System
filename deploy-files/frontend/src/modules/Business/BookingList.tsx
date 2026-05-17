@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip } from 'antd';
-import { Customer, FlightRate, Booking, BookingStatus, MawbStatus } from '../../types';
+import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
-import { businessApi, uploadApi } from '../../services/api';
+import { businessApi, operationApi, uploadApi } from '../../services/api';
 
 const { Text, Title } = Typography;
 
@@ -34,6 +34,7 @@ export const BookingList: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rates, setRates] = useState<FlightRate[]>([]);
+  const [mawbs, setMawbs] = useState<MAWB[]>([]);
   const [loading, setLoading] = useState(false);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
@@ -52,14 +53,16 @@ export const BookingList: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [bookRes, custRes, rateRes] = await Promise.all([
+      const [bookRes, custRes, rateRes, mawbRes] = await Promise.all([
         businessApi.getBookings(),
         businessApi.getCustomers(),
-        businessApi.getRates()
+        businessApi.getRates(),
+        operationApi.getMawbs()
       ]);
       setBookings(bookRes.data);
       setCustomers(custRes.data);
       setRates(rateRes.data);
+      setMawbs(mawbRes.data);
     } catch { message.error('Fetch failed'); }
     finally { setLoading(false); }
   };
@@ -238,16 +241,28 @@ export const BookingList: React.FC = () => {
           },
           {
             title: t('operation.docs') || 'Docs',
-            render: (r: Booking) => (
-              <Button size="small"
-                icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
-                onClick={() => {
-                  if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
-                  else { setManifestTarget(r); setManifestModalOpen(true); }
-                }}>
-                {t('operation.manifest')||'Manifest'}
-              </Button>
-            ),
+            render: (r: Booking) => {
+              const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
+              return (
+                <div className="flex flex-col gap-1">
+                  <Button size="small"
+                    icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
+                    onClick={() => {
+                      if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+                      else { setManifestTarget(r); setManifestModalOpen(true); }
+                    }}>
+                    {t('operation.manifest')||'Manifest'}
+                  </Button>
+                  {mawb?.draftFileUrl && (
+                    <Button size="small"
+                      icon={<FileText size={14} style={{ color: '#f97316' }} />}
+                      onClick={() => triggerDownload(mawb.draftFileUrl!)}>
+                      {t('operation.steps.draft')||'Draft'}
+                    </Button>
+                  )}
+                </div>
+              );
+            },
           },
           {
             title: t('common.status'),
