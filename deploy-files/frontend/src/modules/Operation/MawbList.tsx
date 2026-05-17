@@ -605,7 +605,7 @@ export const MawbList: React.FC = () => {
       render: (_: any, r: Booking) => {
         const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
         return (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-1">
               <Button size="small"
                 icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
@@ -780,6 +780,23 @@ export const MawbList: React.FC = () => {
               )}
             </Form.List>
           </Form.Item>
+          <Divider orientation="left" className="text-xs">{t('operation.returnedItems')}</Divider>
+          <Form.List name="returnedItems">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Card key={key} size="small" className="mb-2 bg-red-50">
+                    <Row gutter={8}>
+                      <Col span={12}><Form.Item {...restField} name={[name, 'subMawb']} label="Sub-ID" rules={[{ required: true }]}><Input /></Form.Item></Col>
+                      <Col span={12}><Form.Item {...restField} name={[name, 'reason']} label={t('operation.reason')} rules={[{ required: true }]}><Input /></Form.Item></Col>
+                    </Row>
+                    <Button size="small" danger onClick={() => remove(name)}>{t('common.delete')}</Button>
+                  </Card>
+                ))}
+                <Button type="link" onClick={() => add()} icon={<Info size={14} />}>{t('operation.returnedItems')}</Button>
+              </>
+            )}
+          </Form.List>
           <Form.Item name="remarks" label={t('common.remarks') || 'Remarks'}><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
