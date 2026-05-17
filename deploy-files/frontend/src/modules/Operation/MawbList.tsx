@@ -983,10 +983,10 @@ export const MawbList: React.FC = () => {
           <div className="space-y-6">
             <Card size="small" className="bg-slate-50">
               <Row gutter={[16, 16]}>
-                <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{detailBooking.customerName}</div></Col>
+                <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{customers.find(c => c.id === detailBooking.customerId)?.name || detailBooking.customerName || '--'}</div></Col>
                 <Col span={12}><Text type="secondary">{t('common.status')}:</Text> <Tag>{t(`booking.status.${detailBooking.status}`)}</Tag></Col>
                 <Col span={12}><Text type="secondary">Route:</Text> <div className="flex flex-col"><span className="font-bold">{detailBooking.origin} → {detailBooking.destination}</span><span className="text-[10px] text-slate-400">{detailBooking.flightDate ? dayjs(detailBooking.flightDate).format('YYYY-MM-DD') : '--'} / {detailBooking.carrier || '--'}</span></div></Col>
-                <Col span={12}><Text type="secondary">MAWB:</Text> <div className="flex flex-col"><span className="text-[10px] text-slate-400 font-bold">{t('operation.mawbRef')||'MAWB'}</span><span className="font-mono text-blue-600">{detailBooking.mawbNo || '--'}</span></div></Col>
+                <Col span={12}><Text type="secondary">MAWB:</Text> <span className="font-mono font-bold text-blue-600">{detailBooking.mawbNo || '--'}</span></Col>
                 <Col span={12}><Text type="secondary">{t('common.user')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPerson || (profile as any)?.name || '--'}</div></Col>
                 <Col span={12}><Text type="secondary">{t('common.phone')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPhone || '--'}</div></Col>
               </Row>
