@@ -142,7 +142,7 @@ export const MawbList: React.FC = () => {
   // Warehouse entry (weight, dims, chargeable)
   const handleWarehouseEntry = async (values: any) => {
     if (!selectedMawb) return;
-    const returnedText = (values.returnedItems || []).map((ri: any) => `[Returned] ${ri.subMawb}: ${ri.reason}`).join('\n');
+    const returnedText = (values.returnedItems || []).map((ri: any) => `[Warehouse Returned] ${ri.subMawb}: ${ri.reason} @ ${dayjs().format('YYYY-MM-DD HH:mm')}`).join('\n');
     try {
       await operationApi.updateMawb(selectedMawb.id, {
         status: 'warehouse_in',
@@ -165,7 +165,7 @@ export const MawbList: React.FC = () => {
   // Customs clearance
   const handleCustoms = async (values: any) => {
     if (!selectedMawb) return;
-    const returnedText = (values.customsReturned || []).map((ri: any) => `[Customs Exception] ${ri.subMawb}: ${ri.reason}`).join('\n');
+    const returnedText = (values.customsReturned || []).map((ri: any) => `[Customs Exception] ${ri.subMawb}: ${ri.reason} @ ${dayjs().format('YYYY-MM-DD HH:mm')}`).join('\n');
     try {
       await operationApi.updateMawb(selectedMawb.id, {
         status: 'customs',
@@ -182,7 +182,7 @@ export const MawbList: React.FC = () => {
   // Terminal in
   const handleTerminal = async (values: any) => {
     if (!selectedMawb) return;
-    const returnedText = (values.terminalReturned || []).map((ri: any) => `[Terminal Exception] ${ri.subMawb}: ${ri.reason}`).join('\n');
+    const returnedText = (values.terminalReturned || []).map((ri: any) => `[Terminal Security Exception] ${ri.subMawb}: ${ri.reason} @ ${dayjs().format('YYYY-MM-DD HH:mm')}`).join('\n');
     try {
       await operationApi.updateMawb(selectedMawb.id, {
         status: 'terminal_in',
@@ -936,10 +936,10 @@ export const MawbList: React.FC = () => {
                 <div>{selectedMawb.remarks}</div>
               </div>
             )}
-            {selectedMawb.remarks && (selectedMawb.remarks.includes('Exception') || selectedMawb.remarks.includes('[Returned]')) && (
+            {selectedMawb.remarks && (selectedMawb.remarks.includes('Exception') || selectedMawb.remarks.includes('Returned')) && (
               <div className="p-3 border rounded bg-red-50 border-red-200">
                 <Text type="danger" className="text-xs block mb-1 font-bold flex items-center gap-1">! {t('operation.exception')}</Text>
-                <div className="text-xs text-red-700">{selectedMawb.remarks.split('\n').filter((l: string) => l.includes('Exception') || l.includes('[Returned]')).map((l: string, i: number) => <div key={i}>{l}</div>)}</div>
+                <div className="text-xs text-red-700">{selectedMawb.remarks.split('\n').filter((l: string) => l.includes('Exception') || l.includes('Returned')).map((l: string, i: number) => <div key={i}>{l}</div>)}</div>
               </div>
             )}
             <Divider orientation="left">{t('operation.docs') || 'Docs'}</Divider>
