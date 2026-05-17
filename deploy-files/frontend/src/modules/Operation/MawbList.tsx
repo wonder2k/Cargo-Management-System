@@ -954,31 +954,33 @@ export const MawbList: React.FC = () => {
               </div>
             )}
             <Divider orientation="left">{t('operation.docs') || 'Docs'}</Divider>
-            <div className="flex gap-3">
+            <Space direction="vertical" className="w-full">
               {(() => {
                 const b = allBookings.find(bk => bk.mawbNo === selectedMawb.mawbNo);
-                return (
-                  <>
-                    <Button size="small" 
-                      icon={<Package size={14} style={{ color: b?.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
-                      onClick={() => {
-                        if (b?.manifestFileUrl) triggerDownload(b.manifestFileUrl);
-                        else if (b) { setManifestTarget(b); setManifestModalOpen(true); }
-                      }}>
-                      {t('operation.manifest')||'Manifest'}
-                    </Button>
-                    <Button size="small" 
-                      icon={<FileText size={14} style={{ color: selectedMawb.draftFileUrl ? '#3b82f6' : '#f97316' }} />}
-                      onClick={() => {
-                        if (selectedMawb.draftFileUrl) triggerDownload(selectedMawb.draftFileUrl);
-                        else { setDraftTarget(selectedMawb); setDraftModalOpen(true); }
-                      }}>
-                      {t('operation.steps.draft')||'Draft'}
-                    </Button>
-                  </>
+                return b?.manifestFileUrl ? (
+                  <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(b.manifestFileUrl!)}>
+                    <Space><Package size={18} style={{color:"#3b82f6"}} /> <Text className="font-medium">{t('operation.manifest')||'Manifest'}</Text></Space>
+                    <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 border rounded">
+                    <Space><Package size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.manifest')||'Manifest'}</Text></Space>
+                    <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
+                  </div>
                 );
               })()}
-            </div>
+              {selectedMawb.draftFileUrl ? (
+                <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(selectedMawb.draftFileUrl!)}>
+                  <Space><FileText size={18} style={{color:"#3b82f6"}} /> <Text className="font-medium">{t('operation.steps.draft')||'Draft'}</Text></Space>
+                  <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 border rounded">
+                  <Space><FileText size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.steps.draft')||'Draft'}</Text></Space>
+                  <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
+                </div>
+              )}
+            </Space>
             <Divider orientation="left" className="text-blue-600 font-bold">
               <Space><Activity size={16} /> 17TRACK {t('operation.tracking')}</Space>
             </Divider>
