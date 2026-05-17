@@ -57,6 +57,7 @@ app.post('/api/track/register', async (req, res) => {
     }
 
     const cleanNumber = number.replace(/\s/g, '').replace(/-/g, '');
+    console.log(`[17TRACK] Registering ${cleanNumber} via ${TRACK_API_BASE}/register`);
     const response = await fetch(`${TRACK_API_BASE}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY },
@@ -65,9 +66,10 @@ app.post('/api/track/register', async (req, res) => {
     const text = await response.text();
     let data;
     try { data = JSON.parse(text); } catch { return res.status(500).json({ error: 'Non-JSON response', details: text.slice(0, 500) }); }
-    if (!response.ok) return res.status(response.status).json(data);
+    if (!response.ok) { console.error(`[17TRACK] API error ${response.status}:`, JSON.stringify(data).slice(0, 300)); return res.status(response.status).json(data); }
     res.json(data);
   } catch (error: any) {
+    console.error('[17TRACK] Register exception:', error.message);
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 });

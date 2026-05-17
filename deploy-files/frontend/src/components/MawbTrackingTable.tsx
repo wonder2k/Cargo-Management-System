@@ -40,7 +40,9 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
       const regData = await regRes.json();
 
       if (!regRes.ok) {
-        setError(`${regData.error || "Server Error"}: ${regData.details || "Registration failed"}`);
+        const errMsg = `[17TRACK] Register error (${regRes.status}): ${JSON.stringify(regData).slice(0, 300)}`;
+        console.error(errMsg);
+        setError(errMsg);
         setLoading(false);
         return;
       }
