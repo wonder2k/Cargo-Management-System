@@ -95,6 +95,16 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// 17TRACK Webhook for tracking push updates
+app.all('/api/webhook/17track', (req, res) => {
+  const now = new Date().toISOString();
+  console.log(`[17TRACK WEBHOOK] ${req.method} at ${now}`);
+  if (req.method === 'POST') {
+    console.log('[17TRACK WEBHOOK] Payload:', JSON.stringify(req.body, null, 2));
+  }
+  res.status(200).json({ code: 0, message: 'accepted' });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Backend running at http://0.0.0.0:${PORT}`);
 });
