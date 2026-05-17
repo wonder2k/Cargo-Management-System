@@ -4,12 +4,16 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
 import 'dotenv/config';
+import { eq, or } from 'drizzle-orm';
 
 import authRoutes from './routes/auth';
 import businessRoutes from './routes/business';
 import operationRoutes from './routes/operation';
 import financeRoutes from './routes/finance';
 import uploadRoutes from './routes/upload';
+
+import { db } from './db';
+import { mawbs } from './db/schema';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -96,12 +100,74 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // 17TRACK Webhook for tracking push updates
-app.all('/api/webhook/17track', (req, res) => {
+app.all('/api/webhook/17track', async (req, res) => {
   const now = new Date().toISOString();
   console.log(`[17TRACK WEBHOOK] ${req.method} at ${now}`);
+
   if (req.method === 'POST') {
-    console.log('[17TRACK WEBHOOK] Payload:', JSON.stringify(req.body, null, 2));
+    const body = req.body;
+    console.log('[17TRACK WEBHOOK] Payload:', JSON.stringify(body).slice(0, 500));
+
+    try {
+      // Determine the tracking number from the payload
+      const trackNumber = body.track_info?.tracking_number || body.number || '';
+      const cleanNo = trackNumber.replace(/\s/g, '').replace(/-/g, '');
+
+      if (!cleanNo) {
+        return res.status(200).json({ code: 0, message: 'no tracking number' });
+      }
+
+      // Find the MAWB in the DB (with or without dashes)
+      const [existing] = await db.select().from(mawbs)
+        .where(or(
+          eq(mawbs.mawbNo, cleanNo),
+          eq(mawbs.mawbNo, trackNumber)
+        ))
+        .limit(1);
+
+      if (!existing) {
+        console.log(`[17TRACK WEBHOOK] No MAWB found for ${cleanNo}, storing as orphan`);
+        return res.status(200).json({ code: 0, message: 'no matching MAWB' });
+      }
+
+      // Build update payload
+      const update: any = { lastActivity: now };
+
+      // Parse tracking logs from the webhook
+      const ti = body.track_info;
+      if (ti?.tracking_full_log && Array.isArray(ti.tracking_full_log)) {
+        const existingLogs = (typeof existing.trackingLogs === 'string'
+          ? JSON.parse(existing.trackingLogs)
+          : existing.trackingLogs) || [];
+        const mergedLogs = [...existingLogs, ...ti.tracking_full_log];
+        // Deduplicate by time+status
+        const seen = new Set();
+        update.trackingLogs = mergedLogs.filter((log: any) => {
+          const key = `${log.time}|${log.status}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      // Map 17track status to MAWB status
+      const eventStatus = ti?.latest_event?.status || ti?.status || '';
+      if (eventStatus === 'DEP' || eventStatus === 'departed') {
+        update.status = 'departed';
+        if (ti?.latest_event?.time) update.atd = new Date(ti.latest_event.time).toISOString();
+      } else if (eventStatus === 'ARR' || eventStatus === 'arrived') {
+        update.status = 'arrived';
+        if (ti?.latest_event?.time) update.ata = new Date(ti.latest_event.time).toISOString();
+      }
+
+      await db.update(mawbs).set(update).where(eq(mawbs.id, existing.id));
+
+      console.log(`[17TRACK WEBHOOK] Updated MAWB ${existing.mawbNo}: status=${update.status || 'unchanged'}, logs=${update.trackingLogs?.length || 0}`);
+    } catch (err: any) {
+      console.error('[17TRACK WEBHOOK] Error processing update:', err.message);
+    }
   }
+
   res.status(200).json({ code: 0, message: 'accepted' });
 });
 
