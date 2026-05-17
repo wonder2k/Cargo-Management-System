@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip, Alert } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding } from 'lucide-react';
+import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding, AlertCircle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
@@ -281,8 +281,14 @@ export const BookingList: React.FC = () => {
           {
             title: t('common.actions'),
             align: 'right' as const,
-            render: (r: Booking) => (
+            render: (r: Booking) => {
+                const mawbA = mawbs.find(m => m.mawbNo === r.mawbNo);
+                const hasException = mawbA?.remarks?.includes('Exception');
+                return (
               <Space>
+                {hasException && (
+                  <Button size="small" danger icon={<AlertCircle size={14} />} onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }} />
+                )}
                 {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
                   <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
                 )}
@@ -290,7 +296,7 @@ export const BookingList: React.FC = () => {
                   <Button size="small" icon={<Printer size={14} style={{ color: '#3b82f6' }} />} onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
                 )}
               </Space>
-            )
+            )}
           }
         ]} />
       </div>
@@ -387,6 +393,17 @@ export const BookingList: React.FC = () => {
                 <div className="text-xs text-slate-600 bg-white p-2 border rounded whitespace-pre-wrap">{selectedBookingDetail.consigneeInfo}</div>
               </div>
             )}
+            <div id="booking-exceptions">
+              {(() => {
+                const mawbX = mawbs.find(m => m.mawbNo === selectedBookingDetail.mawbNo);
+                if (!mawbX?.remarks || !mawbX.remarks.includes('Exception')) return null;
+                return (
+                  <div className="mb-4">
+                    <Alert type="error" showIcon message={t('operation.exception')} description={mawbX.remarks.split('\n').filter((l) => l.includes('Exception')).join('\n')} />
+                  </div>
+                );
+              })()}
+            </div>
             <Divider orientation="left">{t('operation.docs') || 'Docs'}</Divider>
             <Space direction="vertical" className="w-full">
               {selectedBookingDetail.manifestFileUrl ? (

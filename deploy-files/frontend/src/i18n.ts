@@ -214,7 +214,7 @@ const resources = {
         arrival: "Arrival",
         logs: "Operation Logs",
         whseEntryConfirmed: "Whse Entry Confirmed",
-        setTerminalIn: "Terminal In",
+        setTerminalIn: "Terminal Security",
         exception: "Exception",
         financeSettlement: "Finance Settlement",
         activeShipments: "Active Shipments",
@@ -237,7 +237,7 @@ const resources = {
           warehouse: "Warehouse Entry",
           draft: "MAWB Draft",
           customs: "Customs",
-          terminal: "Terminal In",
+          terminal: "Terminal Security",
           tracking: "Depart / Arrive"
         }
       },
@@ -549,12 +549,12 @@ const resources = {
         tracking: "轨迹追踪",
         warehouse: "进仓管理",
         customs: "报关状态",
-        terminal: "分拨理货",
+        terminal: "货站安检",
         departure: "起飞",
         arrival: "到达",
         logs: "操作日志",
         whseEntryConfirmed: "入库确认",
-        setTerminalIn: "分拨理货",
+        setTerminalIn: "货站安检",
         exception: "异常",
         financeSettlement: "财务结算",
         activeShipments: "操作中主单",
@@ -577,7 +577,7 @@ const resources = {
           warehouse: "入库操作",
           draft: "主单草单",
           customs: "报关",
-          terminal: "分拨理货",
+          terminal: "货站安检",
           tracking: "起飞/到达"
         }
       },
