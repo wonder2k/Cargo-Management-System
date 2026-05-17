@@ -19,7 +19,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
 const TRACK_API_KEY = process.env.TRACK_TOKEN;
-const TRACK_API_BASE = 'https://api.17track.net/airtrack/v2.1';
+const TRACK_API_BASE = 'https://api.17track.net/track/v2.1';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '../uploads');
