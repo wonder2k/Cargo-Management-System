@@ -397,8 +397,9 @@ export const BookingList: React.FC = () => {
                 const mawbX = mawbs.find(m => m.mawbNo === selectedBookingDetail.mawbNo || m.mawbNo?.trim() === selectedBookingDetail.mawbNo?.trim());
                 if (!mawbX?.remarks || (!mawbX.remarks.includes('Exception') && !mawbX.remarks.includes('Returned'))) return null;
                 return (
-                  <div className="mb-4">
-                    <Alert type="error" showIcon message={t('operation.exception')} description={mawbX.remarks.split('\n').filter((l) => l.includes('Exception') || l.includes('Returned')).join('\n')} />
+                  <div className="p-3 border rounded bg-red-50 border-red-200">
+                    <Text type="danger" className="text-xs block mb-1 font-bold flex items-center gap-1">! {t('operation.exception')}</Text>
+                    <div className="text-xs text-red-700">{mawbX.remarks.split('\n').filter((l) => l.includes('Exception') || l.includes('Returned')).join('\n')}</div>
                   </div>
                 );
               })()}

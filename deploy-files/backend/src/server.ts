@@ -60,7 +60,7 @@ app.post('/api/track/register', async (req, res) => {
     console.log(`[17TRACK] Registering ${cleanNumber} via ${TRACK_API_BASE}/register`);
     const response = await fetch(`${TRACK_API_BASE}/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY },
+      headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
       body: JSON.stringify([{ number: cleanNumber }]),
     });
     const text = await response.text();
@@ -86,7 +86,7 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
     const cleanNumber = number.replace(/\s/g, '').replace(/-/g, '');
     const response = await fetch(`${TRACK_API_BASE}/gettrackinfo`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY },
+      headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
       body: JSON.stringify([{ number: cleanNumber }]),
     });
     const text = await response.text();

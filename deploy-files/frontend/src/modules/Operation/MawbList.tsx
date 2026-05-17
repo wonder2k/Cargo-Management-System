@@ -936,7 +936,7 @@ export const MawbList: React.FC = () => {
               <Col span={12}><Statistic title="Weight" value={selectedMawb.weight || 0} suffix="KG" /></Col>
               <Col span={12}><Statistic title="Chargeable" value={selectedMawb.chargeableWeight || 0} suffix="KG" /></Col>
             </Row>
-            {selectedMawb.remarks && (
+            {selectedMawb.remarks && !selectedMawb.remarks.includes('Exception') && !selectedMawb.remarks.includes('Returned') && (
               <div className="p-3 border rounded bg-slate-50">
                 <Text type="secondary" className="text-xs block mb-1">Remarks</Text>
                 <div>{selectedMawb.remarks}</div>
