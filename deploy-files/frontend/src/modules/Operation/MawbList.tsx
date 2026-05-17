@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider, DatePicker, Upload, Tooltip } from 'antd';
 import { MAWB, MawbStatus, Booking, Customer } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity, Info } from 'lucide-react';
+import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity, Info, Printer } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { operationApi, businessApi, uploadApi } from '../../services/api';
+import { PDFService } from '../../services/PDFService';
 import MawbTrackingTable from '../../components/MawbTrackingTable';
 
 const { Text, Title } = Typography;
@@ -567,15 +568,17 @@ export const MawbList: React.FC = () => {
     {
       title: t('common.bookingNo') || 'Booking',
       render: (_: any, r: Booking) => (
-        <span className="font-mono font-bold text-blue-600 cursor-pointer"
-          onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
-          {r.bookingNo}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="font-mono font-bold text-blue-600 cursor-pointer"
+            onClick={() => { setDetailBooking(r); setDetailDrawerOpen(true); }}>
+            {r.bookingNo}
+          </span>
+          <span className="font-mono text-blue-500 font-bold text-[10px]">{r.mawbNo || '--'}</span>
+          {r.status === 'finalized' && (
+            <Printer size={12} className="text-blue-500 cursor-pointer" onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
+          )}
+        </div>
       ),
-    },
-    {
-      title: 'MAWB',
-      render: (_: any, r: Booking) => <span className="font-mono text-blue-500 font-bold">{r.mawbNo || '--'}</span>,
     },
     {
       title: t('common.customer'),
@@ -583,7 +586,7 @@ export const MawbList: React.FC = () => {
     },
     {
       title: RouteTitle,
-      render: (_: any, r: Booking) => <Tag>{r.origin} → {r.destination}</Tag>,
+      render: (_: any, r: Booking) => <Tag color="geekblue">{r.origin} → {r.destination}</Tag>,
     },
     {
       title: 'Flight',
@@ -592,6 +595,28 @@ export const MawbList: React.FC = () => {
           <div className="text-slate-700 font-bold">{r.carrier || '--'}</div>
           <div className="text-slate-400">{r.flightDate ? dayjs(r.flightDate).format('MM-DD') : '--'}</div>
         </div>
+      ),
+    },
+    {
+      title: t('common.cargo') || 'Cargo',
+      render: (_: any, r: Booking) => (
+        <div className="text-xs">
+          {r.pieces}P / {r.weight}K / {r.volume}C
+          <div className="text-slate-400 truncate w-28">{r.goodsDescription}</div>
+        </div>
+      ),
+    },
+    {
+      title: t('operation.docs') || 'Docs',
+      render: (_: any, r: Booking) => (
+        <Button size="small"
+          icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
+          onClick={() => {
+            if (r.manifestFileUrl) triggerDownload(r.manifestFileUrl);
+            else { setManifestTarget(r); setManifestModalOpen(true); }
+          }}>
+          {t('operation.manifest')||'Manifest'}
+        </Button>
       ),
     },
     {
@@ -859,10 +884,10 @@ export const MawbList: React.FC = () => {
       </Drawer>
 
       {/* Booking Detail Drawer */}
-      <Drawer title={`Booking: ${detailBooking?.bookingNo}`}
-        open={detailDrawerOpen} onClose={() => setDetailDrawerOpen(false)} width={450}>
+      <Drawer title={<Space><FileText size={18} className="text-blue-600" /> <span className="font-mono">{detailBooking?.bookingNo}</span></Space>}
+        open={detailDrawerOpen} onClose={() => setDetailDrawerOpen(false)} width={500}>
         {detailBooking && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Card size="small" className="bg-slate-50">
               <Row gutter={[16, 16]}>
                 <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{detailBooking.customerName}</div></Col>
@@ -871,16 +896,51 @@ export const MawbList: React.FC = () => {
                 <Col span={12}><Text type="secondary">MAWB:</Text> <span className="font-mono text-blue-600">{detailBooking.mawbNo || '--'}</span></Col>
               </Row>
             </Card>
-            <Divider />
+            <Divider orientation="left">{t('common.cargo') || 'Cargo'}</Divider>
             <Row gutter={[16, 16]}>
               <Col span={8}><Statistic title="Pieces" value={detailBooking.pieces} /></Col>
               <Col span={8}><Statistic title="Weight" value={detailBooking.weight} suffix="KG" /></Col>
               <Col span={8}><Statistic title="Volume" value={detailBooking.volume} suffix="CBM" /></Col>
             </Row>
             <div className="p-3 border rounded bg-slate-50">
-              <Text type="secondary" className="text-xs block mb-1">Goods</Text>
-              <div>{detailBooking.goodsDescription}</div>
+              <Text type="secondary" className="text-xs block mb-1 underline">{t('common.goodsDesc') || 'Goods'}</Text>
+              <div className="text-sm">{detailBooking.goodsDescription}</div>
             </div>
+            {detailBooking.shipperInfo && (
+              <div>
+                <Divider orientation="left">{t('common.shipperInfo') || 'Shipper'}</Divider>
+                <div className="text-xs text-slate-600 bg-white p-2 border rounded whitespace-pre-wrap">{detailBooking.shipperInfo}</div>
+              </div>
+            )}
+            {detailBooking.consigneeInfo && (
+              <div>
+                <Divider orientation="left">{t('common.consigneeInfo') || 'Consignee'}</Divider>
+                <div className="text-xs text-slate-600 bg-white p-2 border rounded whitespace-pre-wrap">{detailBooking.consigneeInfo}</div>
+              </div>
+            )}
+            <Divider orientation="left">{t('operation.docs') || 'Docs'}</Divider>
+            <Space direction="vertical" className="w-full">
+              {detailBooking.manifestFileUrl ? (
+                <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(detailBooking.manifestFileUrl!)}>
+                  <Space><Package size={18} style={{color:'#3b82f6'}} /> <Text className="font-medium">{t('operation.manifest')||'Manifest'}</Text></Space>
+                  <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 border rounded">
+                  <Space><Package size={18} className="text-slate-300" /> <Text className="font-medium text-slate-400">{t('operation.manifest')||'Manifest'}</Text></Space>
+                  <Text type="secondary" className="text-xs">{t('common.noData')||'Not uploaded'}</Text>
+                </div>
+              )}
+              {(() => {
+                const mawb = mawbs.find(m => m.mawbNo === detailBooking.mawbNo);
+                return mawb?.draftFileUrl ? (
+                  <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(mawb.draftFileUrl!)}>
+                    <Space><FileText size={18} style={{color:'#f97316'}} /> <Text className="font-medium">{t('operation.steps.draft')||'Draft'}</Text></Space>
+                    <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
+                  </div>
+                ) : null;
+              })()}
+            </Space>
           </div>
         )}
       </Drawer>
