@@ -615,7 +615,7 @@ export const MawbList: React.FC = () => {
       render: (_: any, r: Booking) => {
         const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
         return (
-          <div className="flex flex-col gap-1">
+          <Space size="small" wrap>
             <Button size="small"
               icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
               onClick={() => {
@@ -631,7 +631,7 @@ export const MawbList: React.FC = () => {
                 {t('operation.steps.draft')||'Draft'}
               </Button>
             )}
-          </div>
+          </Space>
         );
       },
     },
