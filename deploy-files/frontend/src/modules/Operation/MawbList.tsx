@@ -458,7 +458,7 @@ export const MawbList: React.FC = () => {
         if (!nextLabel || r.status === 'on_hold' || r.status === 'exception') return null;
         return (
           <Space>
-            {(r.status === 'warehouse_in' || r.status === 'customs') && (
+            {(r.status === 'warehouse_in' || r.status === 'customs') && !r.draftFileUrl && (
               <Tooltip title={t('common.upload')+' Draft MAWB'}>
                 <Button size="small" icon={<UploadIcon size={14} />}
                   onClick={() => { setDraftTarget(r); setDraftModalOpen(true); }} />
@@ -606,7 +606,7 @@ export const MawbList: React.FC = () => {
         const mawb = mawbs.find(m => m.mawbNo === r.mawbNo);
         return (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-6">
               <Button size="small"
                 icon={<Package size={14} style={{ color: r.manifestFileUrl ? '#3b82f6' : '#f97316' }} />}
                 onClick={() => {
@@ -621,7 +621,7 @@ export const MawbList: React.FC = () => {
             </div>
             {mawb?.draftFileUrl && (
               <Button size="small"
-                icon={<FileText size={14} style={{ color: '#f97316' }} />}
+                icon={<FileText size={14} style={{ color: '#3b82f6' }} />}
                 onClick={() => triggerDownload(mawb.draftFileUrl!)}>
                 {t('operation.steps.draft')||'Draft'}
               </Button>
@@ -938,7 +938,10 @@ export const MawbList: React.FC = () => {
                 <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{detailBooking.customerName}</div></Col>
                 <Col span={12}><Text type="secondary">{t('common.status')}:</Text> <Tag>{t(`booking.status.${detailBooking.status}`)}</Tag></Col>
                 <Col span={12}><Text type="secondary">Route:</Text> <div className="font-bold">{detailBooking.origin} → {detailBooking.destination}</div></Col>
+                <Col span={12}><Text type="secondary">Flight:</Text> <div className="font-bold font-mono">{detailBooking.flightDate ? dayjs(detailBooking.flightDate).format('YYYY-MM-DD') : '--'} / {detailBooking.carrier || '--'}</div></Col>
                 <Col span={12}><Text type="secondary">MAWB:</Text> <span className="font-mono text-blue-600">{detailBooking.mawbNo || '--'}</span></Col>
+                <Col span={12}><Text type="secondary">{t('common.user')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPerson || (profile as any)?.name || '--'}</div></Col>
+                <Col span={12}><Text type="secondary">{t('common.phone')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPhone || '--'}</div></Col>
               </Row>
             </Card>
             <Divider orientation="left">{t('common.cargo') || 'Cargo'}</Divider>
@@ -980,7 +983,7 @@ export const MawbList: React.FC = () => {
                 const mawb = mawbs.find(m => m.mawbNo === detailBooking.mawbNo);
                 return mawb?.draftFileUrl ? (
                   <div className="flex items-center justify-between p-3 border rounded hover:bg-slate-50 cursor-pointer" onClick={() => triggerDownload(mawb.draftFileUrl!)}>
-                    <Space><FileText size={18} style={{color:'#f97316'}} /> <Text className="font-medium">{t('operation.steps.draft')||'Draft'}</Text></Space>
+                    <Space><FileText size={18} style={{color:'#3b82f6'}} /> <Text className="font-medium">{t('operation.steps.draft')||'Draft'}</Text></Space>
                     <Button type="link" icon={<ExternalLink size={14} />}>{t('common.download')||'Download'}</Button>
                   </div>
                 ) : null;
