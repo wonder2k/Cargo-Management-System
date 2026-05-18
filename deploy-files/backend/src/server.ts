@@ -56,8 +56,8 @@ app.post('/api/track/register', async (req, res) => {
       return res.status(400).json({ code: 999, message: 'API Token Missing. Set TRACK_TOKEN in .env' });
     }
 
-    const cleanNumber = number.replace(/\s/g, '').replace(/-/g, '');
-    console.log(`[17TRACK] Registering ${cleanNumber} via ${TRACK_API_BASE}/register`);
+    const cleanNumber = number.trim();
+    console.log(`[17TRACK] Registering ${number} via ${TRACK_API_BASE}/register`);
     const response = await fetch(`${TRACK_API_BASE}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
@@ -83,7 +83,8 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
       return res.status(400).json({ code: 999, message: 'API Token Missing. Set TRACK_TOKEN in .env' });
     }
 
-    const cleanNumber = number.replace(/\s/g, '').replace(/-/g, '');
+    const cleanNumber = number.trim();
+    console.log(`[17TRACK] Fetching ${number} via ${TRACK_API_BASE}/gettrackinfo`);
     const response = await fetch(`${TRACK_API_BASE}/gettrackinfo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
