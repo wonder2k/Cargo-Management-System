@@ -81,15 +81,26 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
 
       if (result.code === 0 && result.data && Array.isArray(result.data.accepted) && result.data.accepted.length > 0) {
         const item = result.data.accepted[0];
-        const trackInfo = item.track_info;
+        const awbTrackingInfos = item.track_info?.shipment?.awb_tracking_infos || [];
 
-        if (trackInfo && trackInfo.tracking_full_log && trackInfo.tracking_full_log.length > 0) {
-          setTrackLogs(trackInfo.tracking_full_log);
+        if (awbTrackingInfos.length > 0) {
+          // Map AWB tracking fields to our expected format
+          const mapped = awbTrackingInfos.map((t: any) => ({
+            time: t.date || '',
+            status: t.status_code || '',
+            description: t.description || '',
+            location: t.station || '',
+            flight_no: t.flight_no || '',
+            pieces: t.pieces || 0,
+            weight: parseFloat(t.weight) || 0,
+          }));
+          setTrackLogs(mapped);
           setError(null);
         } else {
-          const latestEvent = trackInfo?.latest_event?.description;
-          if (latestEvent) {
-            setError(`Current Status: ${latestEvent}. Full history is pending synchronization.`);
+          const awbInfo = item.track_info?.shipment?.awb_info || {};
+          const latestStatus = item.track_info?.shipment?.latest_status?.status || awbInfo.status || '';
+          if (latestStatus) {
+            setError(`Current Status: ${latestStatus}. Waiting for tracking updates from carrier.`);
           } else {
             setError("The shipment has been registered successfully, but 17TRACK hasn't received detailed logs from the carrier yet. Please try again in 5-10 minutes.");
           }

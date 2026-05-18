@@ -103,73 +103,88 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// 17TRACK Webhook for tracking push updates
+// 17TRACK AWB Webhook for tracking push updates
 app.all('/api/webhook/17track', async (req, res) => {
+  // Verify webhook signature
+  const signature = req.headers['sign'] || '';
+  const rawBody = JSON.stringify(req.body);
+  const expectedSign = require('crypto').createHash('sha256').update(rawBody + '/' + TRACK_API_KEY).digest('hex');
+  if (signature && signature !== expectedSign) {
+    console.error('[17TRACK WEBHOOK] Invalid signature');
+    return res.status(200).json({ code: 0, message: 'accepted' });
+  }
+
   const now = new Date().toISOString();
-  console.log(`[17TRACK WEBHOOK] ${req.method} at ${now}`);
+  console.log(`[17TRACK WEBHOOK] ${req.method} event=${req.body?.event} at ${now}`);
 
   if (req.method === 'POST') {
     const body = req.body;
-    console.log('[17TRACK WEBHOOK] Payload:', JSON.stringify(body).slice(0, 500));
+    const event = body.event;
+    const data = body.data || {};
 
-    try {
-      // Determine the tracking number from the payload
-      const trackNumber = body.track_info?.tracking_number || body.number || '';
-      const cleanNo = trackNumber.replace(/\s/g, '').replace(/-/g, '');
-
-      if (!cleanNo) {
-        return res.status(200).json({ code: 0, message: 'no tracking number' });
-      }
-
-      // Find the MAWB in the DB (with or without dashes)
-      const [existing] = await db.select().from(mawbs)
-        .where(or(
-          eq(mawbs.mawbNo, cleanNo),
-          eq(mawbs.mawbNo, trackNumber)
-        ))
-        .limit(1);
-
-      if (!existing) {
-        console.log(`[17TRACK WEBHOOK] No MAWB found for ${cleanNo}, storing as orphan`);
-        return res.status(200).json({ code: 0, message: 'no matching MAWB' });
-      }
-
-      // Build update payload
-      const update: any = { lastActivity: now };
-
-      // Parse tracking logs from the webhook
-      const ti = body.track_info;
-      if (ti?.tracking_full_log && Array.isArray(ti.tracking_full_log)) {
-        const existingLogs = (typeof existing.trackingLogs === 'string'
-          ? JSON.parse(existing.trackingLogs)
-          : existing.trackingLogs) || [];
-        const mergedLogs = [...existingLogs, ...ti.tracking_full_log];
-        // Deduplicate by time+status
-        const seen = new Set();
-        update.trackingLogs = mergedLogs.filter((log: any) => {
-          const key = `${log.time}|${log.status}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-      }
-
-      // Map 17track status to MAWB status
-      const eventStatus = ti?.latest_event?.status || ti?.status || '';
-      if (eventStatus === 'DEP' || eventStatus === 'departed') {
-        update.status = 'departed';
-        if (ti?.latest_event?.time) update.atd = new Date(ti.latest_event.time).toISOString();
-      } else if (eventStatus === 'ARR' || eventStatus === 'arrived') {
-        update.status = 'arrived';
-        if (ti?.latest_event?.time) update.ata = new Date(ti.latest_event.time).toISOString();
-      }
-
-      await db.update(mawbs).set(update).where(eq(mawbs.id, existing.id));
-
-      console.log(`[17TRACK WEBHOOK] Updated MAWB ${existing.mawbNo}: status=${update.status || 'unchanged'}, logs=${update.trackingLogs?.length || 0}`);
-    } catch (err: any) {
-      console.error('[17TRACK WEBHOOK] Error processing update:', err.message);
+    // Extract AWB number (always with dash: 123-12345678 format)
+    const awbNumber = data.number || '';
+    if (!awbNumber) {
+      return res.status(200).json({ code: 0, message: 'no tracking number' });
     }
+
+    if (event === 'AWB_STOPPED') {
+      console.log(`[17TRACK WEBHOOK] AWB ${awbNumber} stopped (${data.icao || ''})`);
+      return res.status(200).json({ code: 0, message: 'accepted' });
+    }
+
+    // Find the MAWB by awbNumber (with dash)
+    const [existing] = await db.select().from(mawbs)
+      .where(eq(mawbs.mawbNo, awbNumber))
+      .limit(1);
+
+    if (!existing) {
+      console.log(`[17TRACK WEBHOOK] No MAWB found for ${awbNumber}`);
+      return res.status(200).json({ code: 0, message: 'no matching MAWB' });
+    }
+
+    const update: any = { lastActivity: now };
+
+    // Process tracking info from AWB_UPDATED event
+    const trackInfo = data.track_info || {};
+    const shipment = trackInfo.shipment || {};
+    const trackingInfos = shipment.awb_tracking_infos || [];
+
+    if (trackingInfos.length > 0) {
+      // Map AWB tracking infos to our tracking logs format
+      const newLogs = trackingInfos.map((t: any) => ({
+        time: t.date || '',
+        status: t.status_code || '',
+        description: t.description || '',
+        location: t.station || '',
+        flight_no: t.flight_no || '',
+        pieces: t.pieces || 0,
+        weight: t.weight || 0,
+      }));
+
+      // Merge with existing tracking logs
+      const existingLogs = (typeof existing.trackingLogs === 'string'
+        ? JSON.parse(existing.trackingLogs)
+        : existing.trackingLogs) || [];
+      const mergedLogs = [...existingLogs, ...newLogs];
+      const seen = new Set();
+      update.trackingLogs = mergedLogs.filter((log: any) => {
+        const key = `${log.time}|${log.status}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    // Update MAWB status based on latest tracking event
+    const awbInfo = shipment.awb_info || {};
+    const latestStatus = shipment.latest_status?.status || awbInfo.status || '';
+    if (latestStatus === 'Delivered') {
+      if (!update.status) update.status = 'arrived';
+    }
+
+    await db.update(mawbs).set(update).where(eq(mawbs.id, existing.id));
+    console.log(`[17TRACK WEBHOOK] Updated AWB ${awbNumber}: status=${update.status || 'unchanged'}, logs=${update.trackingLogs?.length || 0}`);
   }
 
   res.status(200).json({ code: 0, message: 'accepted' });
