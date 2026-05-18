@@ -119,7 +119,7 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
         };
 
         if (latestStatus || awbInfo.origin_iata || awbInfo.destination_iata) {
-          const update: any = { lastActivity: new Date().toISOString() };
+          const update: any = { lastActivity: new Date() };
 
           if (awbInfo.origin_iata) update.origin = awbInfo.origin_iata;
           if (awbInfo.destination_iata) update.destination = awbInfo.destination_iata;
@@ -140,8 +140,8 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
           const transportInfos = shipment.awb_transport_infos || [];
           if (transportInfos.length > 0) {
             const firstLeg = transportInfos[0];
-            if (firstLeg.atd && !update.atd) update.atd = new Date(firstLeg.atd).toISOString();
-            if (firstLeg.ata && !update.ata) update.ata = new Date(firstLeg.ata).toISOString();
+            if (firstLeg.atd && !update.atd) update.atd = new Date(firstLeg.atd);
+            if (firstLeg.ata && !update.ata) update.ata = new Date(firstLeg.ata);
           }
 
           await db.update(mawbs).set(update).where(eq(mawbs.mawbNo, cleanNumber));
