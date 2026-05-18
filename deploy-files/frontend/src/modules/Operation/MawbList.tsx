@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Card, Tag, Drawer, Form, Input, Select, App, Space, Typography, Row, Col, Modal, Tabs, Statistic, Badge, InputNumber, Divider, DatePicker, Upload, Tooltip } from 'antd';
 import { MAWB, MawbStatus, Booking, Customer } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Search, Play, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity, Info, Printer } from 'lucide-react';
+import { Plus, Search, Play, PauseCircle, Package, FileText, CheckCircle2, XCircle, Clock, TrendingUp, Upload as UploadIcon, ExternalLink, PlaneTakeoff, PlaneLanding, Activity, Info, Printer } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { operationApi, businessApi, uploadApi } from '../../services/api';
@@ -311,6 +311,32 @@ export const MawbList: React.FC = () => {
     return null;
   };
 
+  // Suspend/Resume MAWB
+  const handleHold = async (mawb: MAWB) => {
+    try {
+      const existing = mawb.remarks || '';
+      const suspendNote = `[Suspended] @ ${dayjs().format('YYYY-MM-DD HH:mm')}`;
+      await operationApi.updateMawb(mawb.id, {
+        status: 'on_hold',
+        remarks: [existing, suspendNote].filter(Boolean).join('\n'),
+      });
+      message.success('MAWB suspended');
+      dispatchMawbUpdate();
+    } catch {
+      message.error(t('common.error'));
+    }
+  };
+
+  const handleResume = async (mawb: MAWB) => {
+    try {
+      await operationApi.updateMawb(mawb.id, { status: 'booked' });
+      message.success('MAWB resumed');
+      dispatchMawbUpdate();
+    } catch {
+      message.error(t('common.error'));
+    }
+  };
+
   const filteredMawbs = mawbs.filter(m =>
     (m.mawbNo || '').toLowerCase().includes(searchText.toLowerCase()) ||
     (m.origin || '').toLowerCase().includes(searchText.toLowerCase()) ||
@@ -470,7 +496,19 @@ export const MawbList: React.FC = () => {
       align: 'right' as const,
       render: (_: any, r: MAWB) => {
         const nextLabel = getNextStatusLabel(r.status);
-        if (!nextLabel || r.status === 'on_hold' || r.status === 'exception') return null;
+        const canHold = !['on_hold', 'closed', 'arrived', 'exception'].includes(r.status);
+        const isHeld = r.status === 'on_hold';
+        if (r.status === 'exception') return null;
+        if (isHeld) {
+          return (
+            <Space>
+              <Button size="small" type="primary" icon={<Play size={10} />}
+                onClick={() => handleResume(r)}>
+                {t('common.resume')}
+              </Button>
+            </Space>
+          );
+        }
         return (
           <Space>
             {(r.status === 'warehouse_in' || r.status === 'customs') && !r.draftFileUrl && (
@@ -479,11 +517,19 @@ export const MawbList: React.FC = () => {
                   onClick={() => { setDraftTarget(r); setDraftModalOpen(true); }} />
               </Tooltip>
             )}
-            <Button type="primary" size="small" icon={<Play size={10} />}
-              onClick={() => handleNextStep(r)}
-              className="flex items-center gap-1">
-              {nextLabel}
-            </Button>
+            {canHold && (
+              <Tooltip title={t('booking.status.on_hold')}>
+                <Button size="small" danger type="text" icon={<PauseCircle size={14} />}
+                  onClick={() => handleHold(r)} />
+              </Tooltip>
+            )}
+            {nextLabel && (
+              <Button type="primary" size="small" icon={<Play size={10} />}
+                onClick={() => handleNextStep(r)}
+                className="flex items-center gap-1">
+                {nextLabel}
+              </Button>
+            )}
           </Space>
         );
       },

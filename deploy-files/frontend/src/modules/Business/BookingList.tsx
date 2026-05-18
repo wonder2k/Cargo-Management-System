@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip, Alert } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding, AlertCircle, Search } from 'lucide-react';
+import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding, AlertCircle, Search, PauseCircle, Play } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
@@ -300,16 +300,37 @@ export const BookingList: React.FC = () => {
             render: (r: Booking) => {
                 const mawbA = mawbs.find(m => m.mawbNo === r.mawbNo || m.mawbNo?.trim() === r.mawbNo?.trim());
                 const hasException = mawbA?.remarks?.includes('Exception') || mawbA?.remarks?.includes('[Returned]');
+                const isOnHold = r.status === 'on_hold';
+                const canHold = !r.mawbNo && ['pending', 'pre_booked', 'space_confirmed', 'space_partial', 'space_rejected'].includes(r.status);
                 return (
               <Space>
                 {hasException && (
                   <Button size="small" danger icon={<AlertCircle size={14} />} onClick={() => { setSelectedBookingDetail(r); setDetailDrawerOpen(true); }} />
                 )}
-                {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
-                  <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
-                )}
-                {r.status === 'finalized' && (
-                  <Button size="small" icon={<Printer size={14} style={{ color: '#3b82f6' }} />} onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
+                {isOnHold ? (
+                  <Button size="small" type="primary" icon={<Play size={14} />}
+                    onClick={async () => {
+                      try { await businessApi.updateBooking(r.id, { status: 'pending' }); message.success(t('common.success')); fetchData(); } catch { message.error(t('common.error')); }
+                    }}>
+                    {t('common.resume')}
+                  </Button>
+                ) : (
+                  <>
+                    {canHold && (
+                      <Button size="small" danger type="text" icon={<PauseCircle size={14} />}
+                        onClick={async () => {
+                          try { await businessApi.updateBooking(r.id, { status: 'on_hold' }); message.success(t('common.success')); fetchData(); } catch { message.error(t('common.error')); }
+                        }}>
+                        {t('booking.status.on_hold')}
+                      </Button>
+                    )}
+                    {(r.status === 'pre_booked' || r.status === 'space_confirmed') && (
+                      <Button type="primary" size="small" ghost onClick={() => { setSelectedBooking(r); setActionModalOpen(true); }}>{t('common.submit')}</Button>
+                    )}
+                    {r.status === 'finalized' && (
+                      <Button size="small" icon={<Printer size={14} style={{ color: '#3b82f6' }} />} onClick={() => { const wh = (profile as any)?.warehouses?.find((w: any) => w.id === r.warehouseId); PDFService.generateBookingOrder(r, wh, profile); }} />
+                    )}
+                  </>
                 )}
               </Space>
             )}
