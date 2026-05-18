@@ -105,18 +105,35 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
         const latestStatus = shipment.latest_status?.status || '';
         const awbInfo = shipment.awb_info || {};
 
+        console.log(`[17TRACK AWB] Sync check: number=${item.number}, latestStatus=${latestStatus}, origin=${awbInfo.origin_iata}, dest=${awbInfo.destination_iata}`);
+
+        // Map 17track status to MAWB status
+        const statusMap: Record<string, string> = {
+          'NotFound': 'pending',
+          'Booked': 'confirmed',
+          'Received': 'warehouse_in',
+          'InTransit': 'departed',
+          'Arrived': 'arrived',
+          'Notified': 'arrived',
+          'Delivered': 'arrived',
+        };
+
         if (latestStatus || awbInfo.origin_iata || awbInfo.destination_iata) {
           const update: any = { lastActivity: new Date().toISOString() };
 
-          // Update origin/destination if available
           if (awbInfo.origin_iata) update.origin = awbInfo.origin_iata;
           if (awbInfo.destination_iata) update.destination = awbInfo.destination_iata;
 
-          // Update MAWB status based on 17track status
-          if (latestStatus === 'Arrived' || latestStatus === 'Delivered') {
-            update.status = 'arrived';
-          } else if (latestStatus === 'InTransit' || latestStatus === 'Departed') {
-            if (update.status !== 'arrived') update.status = 'departed';
+          if (statusMap[latestStatus]) {
+            update.status = statusMap[latestStatus];
+          }
+
+          // Also check latest tracking event for ARR/DEP status codes
+          if (!update.status) {
+            const trackingInfos = shipment.awb_tracking_infos || [];
+            const lastEvent = trackingInfos[trackingInfos.length - 1];
+            if (lastEvent?.status_code === 'ARR') update.status = 'arrived';
+            else if (lastEvent?.status_code === 'DEP') update.status = 'departed';
           }
 
           // Extract flight dates from transport info
