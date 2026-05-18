@@ -350,8 +350,8 @@ export const MawbList: React.FC = () => {
         <div className="flex flex-col">
           <div className="flex items-center gap-1">
             <span className="text-sm font-mono font-bold text-blue-600 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }}>{r.mawbNo}</span>
-            <Tooltip title={t('operation.viewTrackingInternal')}><Search size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }} /></Tooltip>
-            <Tooltip title={t('operation.manualQuery')}><ExternalLink size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')} /></Tooltip>
+            <Tooltip title={t('operation.viewTrackingInternal')}><Search size={16} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }} /></Tooltip>
+            <Tooltip title={t('operation.manualQuery')}><ExternalLink size={16} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')} /></Tooltip>
           </div>
           <span className="text-[10px] text-slate-400">{r.carrier || '--'}</span>
         </div>

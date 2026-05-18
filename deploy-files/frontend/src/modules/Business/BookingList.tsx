@@ -176,8 +176,8 @@ export const BookingList: React.FC = () => {
                     <span className="text-[10px] font-mono font-bold text-blue-600 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')}>
                       {r.mawbNo}
                     </span>
-                    <Tooltip title={t('operation.viewTrackingInternal')}><Search size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" /></Tooltip>
-                    <Tooltip title={t('operation.manualQuery')}><ExternalLink size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }} /></Tooltip>
+                    <Tooltip title={t('operation.viewTrackingInternal')}><Search size={16} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" /></Tooltip>
+                    <Tooltip title={t('operation.manualQuery')}><ExternalLink size={16} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }} /></Tooltip>
                   </span>
                 )}
               </div>
