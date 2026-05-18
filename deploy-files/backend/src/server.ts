@@ -57,17 +57,36 @@ app.post('/api/track/register', async (req, res) => {
     }
 
     const cleanNumber = number.trim();
-    console.log(`[17TRACK] Registering ${number} via ${TRACK_API_BASE}/register`);
-    const response = await fetch(`${TRACK_API_BASE}/register`, {
+    console.log(`[17TRACK] Registering ${cleanNumber}`);
+
+    // Step 1: Detect carrier
+    const detectRes = await fetch(`${TRACK_API_BASE}/detectcarrier`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json' },
+      body: JSON.stringify({ number: cleanNumber }),
+    });
+    const detectData = await detectRes.json();
+    console.log(`[17TRACK] Carrier detection:`, JSON.stringify(detectData).slice(0, 300));
+
+    let carrierCode = null;
+    if (detectData.code === 0 && detectData.data?.length > 0) {
+      carrierCode = detectData.data[0].carrier;
+    }
+
+    // Step 2: Register with carrier code
+    const regPayload = carrierCode
+      ? [{ number: cleanNumber, carrier: carrierCode }]
+      : [{ number: cleanNumber }];
+    const regRes = await fetch(`${TRACK_API_BASE}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
-      body: JSON.stringify([{ number: cleanNumber }]),
+      body: JSON.stringify(regPayload),
     });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { return res.status(500).json({ error: 'Non-JSON response', details: text.slice(0, 500) }); }
-    if (!response.ok) { console.error(`[17TRACK] API error ${response.status}:`, JSON.stringify(data).slice(0, 300)); return res.status(response.status).json(data); }
-    res.json(data);
+    const regText = await regRes.text();
+    let regData;
+    try { regData = JSON.parse(regText); } catch { return res.status(500).json({ error: 'Non-JSON response', details: regText.slice(0, 500) }); }
+    if (!regRes.ok) { console.error(`[17TRACK] Register error:`, JSON.stringify(regData).slice(0, 300)); return res.status(regRes.status).json(regData); }
+    res.json({ ...regData, carrierDetected: carrierCode });
   } catch (error: any) {
     console.error('[17TRACK] Register exception:', error.message);
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
@@ -76,7 +95,7 @@ app.post('/api/track/register', async (req, res) => {
 
 app.post('/api/track/gettrackinfo', async (req, res) => {
   try {
-    const { number } = req.body;
+    const { number, carrier } = req.body;
     if (!number) return res.status(400).json({ error: 'Tracking number required' });
 
     if (!TRACK_API_KEY || TRACK_API_KEY === 'YOUR_API_KEY_HERE') {
@@ -84,11 +103,12 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
     }
 
     const cleanNumber = number.trim();
-    console.log(`[17TRACK] Fetching ${number} via ${TRACK_API_BASE}/gettrackinfo`);
+    const infoPayload = carrier ? [{ number: cleanNumber, carrier }] : [{ number: cleanNumber }];
+    console.log(`[17TRACK] Fetching ${cleanNumber} carrier=${carrier || 'auto'}`);
     const response = await fetch(`${TRACK_API_BASE}/gettrackinfo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', '17token': TRACK_API_KEY, 'Accept': 'application/json', 'User-Agent': 'JCargo-CMS/1.0' },
-      body: JSON.stringify([{ number: cleanNumber }]),
+      body: JSON.stringify(infoPayload),
     });
     const text = await response.text();
     let data;
