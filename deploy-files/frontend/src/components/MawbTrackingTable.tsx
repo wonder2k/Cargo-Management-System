@@ -65,14 +65,10 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
         console.log("Note: Shipment already registered, proceeding to fetch info.");
       }
 
-      // Use carrier code from registration (set by backend detectcarrier)
-      const carrierCode = regData.carrierDetected;
-      const infoPayload = carrierCode ? { number: mawbNo, carrier: carrierCode } : { number: mawbNo };
-
       const infoRes = await fetch("/api/track/gettrackinfo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(infoPayload),
+        body: JSON.stringify({ number: mawbNo }),
       });
 
       const result = await infoRes.json();
