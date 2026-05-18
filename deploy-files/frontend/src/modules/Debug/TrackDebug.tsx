@@ -81,7 +81,7 @@ export const TrackDebug: React.FC = () => {
         idx === 1 ? { ...log, response: infoData, status: infoRes.ok ? 'success' : 'error' } : log
       ));
 
-      if (regData.code === 0 || regData.code === -18019901) {
+      if (regData.code === 0 || regData.code === -18019901 || regData.code === -18019603) {
         message.success('Registration successful');
       } else if (regData.code === 999) {
         message.error('API Token not configured');
@@ -90,9 +90,9 @@ export const TrackDebug: React.FC = () => {
       }
     } catch (err: any) {
       setLogs(prev => prev.map((log, idx) =>
-        idx === 0 ? { ...log, response: { error: err.message }, status: 'error' } : log
+        idx < 2 ? { ...log, response: { error: err.message }, status: 'error' } : log
       ));
-      message.error('Registration failed: ' + err.message);
+      message.error('Request failed: ' + err.message);
     } finally {
       setLoading(false);
     }

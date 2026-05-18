@@ -56,7 +56,7 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
       if (regData.data?.rejected && regData.data.rejected.length > 0) {
         const reject = regData.data.rejected[0];
         const code = reject.error_code ?? reject.error?.code ?? reject.code;
-        if (code !== -18019901) {
+        if (code !== -18019901 && code !== -18019603) {
           const msg = reject.error_message || reject.error?.message || reject.message || reject.error_msg || JSON.stringify(reject);
           setError(`Registration Rejected: ${msg} (Code: ${code ?? "N/A"})`);
           setLoading(false);
