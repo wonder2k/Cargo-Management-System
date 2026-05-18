@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   BarChart2,
   Users,
-  DollarSign
+  DollarSign,
+  Activity
 } from 'lucide-react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -74,7 +75,12 @@ export const MainLayout: React.FC = () => {
     {
       key: '/users',
       icon: <ShieldAlert size={18} />,
-      label: <Link to="/users">{t('menu.users')}</Link>,
+      label: <Link to="/users">{t('menu.users')}</Link>
+    },
+    {
+      key: '/trackdebug',
+      icon: <Activity size={18} />,
+      label: <Link to="/trackdebug">17TRACK Debug</Link>,
     },
   ];
 
