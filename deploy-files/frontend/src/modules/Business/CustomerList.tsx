@@ -46,6 +46,7 @@ export const CustomerList: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!['admin', 'business'].includes(user?.role || '')) return;
     fetchCustomers();
   }, []);
 

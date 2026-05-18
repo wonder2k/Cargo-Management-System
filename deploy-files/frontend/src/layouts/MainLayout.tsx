@@ -71,18 +71,20 @@ export const MainLayout: React.FC = () => {
       key: '/customers',
       icon: <Users size={18} />,
       label: <Link to="/customers">{t('menu.customers')}</Link>,
+      hide: !['admin', 'business'].includes(user?.role || ''),
     },
     {
       key: '/users',
       icon: <ShieldAlert size={18} />,
-      label: <Link to="/users">{t('menu.users')}</Link>
+      label: <Link to="/users">{t('menu.users')}</Link>,
+      hide: user?.role !== 'admin',
     },
     {
       key: '/trackdebug',
       icon: <Activity size={18} />,
       label: <Link to="/trackdebug">17TRACK Debug</Link>,
     },
-  ];
+  ].filter(item => !item.hide);
 
   const handleLogout = async () => {
     await logout();

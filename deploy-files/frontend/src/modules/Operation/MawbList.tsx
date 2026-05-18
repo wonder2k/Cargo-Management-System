@@ -99,6 +99,12 @@ export const MawbList: React.FC = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Custom event to notify other components of MAWB status changes
+  const dispatchMawbUpdate = () => {
+    fetchData();
+    window.dispatchEvent(new CustomEvent('mawb-status-updated', { detail: { timestamp: Date.now() } }));
+  };
+
   // ==== Workflow Handlers ====
 
   // Space confirmation on a pending booking
@@ -112,7 +118,7 @@ export const MawbList: React.FC = () => {
       });
       message.success('Space status updated');
       setSpaceModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -133,7 +139,7 @@ export const MawbList: React.FC = () => {
       });
       message.success('MAWB issued — moved to Operation');
       setFinalModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -156,7 +162,7 @@ export const MawbList: React.FC = () => {
       try { fetch('/api/track/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: selectedMawb.mawbNo }) }); } catch {}
       message.success(t('common.success'));
       setWarehouseModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -175,7 +181,7 @@ export const MawbList: React.FC = () => {
       });
       message.success(t('common.success'));
       setCustomsModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -196,7 +202,7 @@ export const MawbList: React.FC = () => {
       try { fetch('/api/track/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: selectedMawb.mawbNo }) }); } catch {}
       message.success(t('common.success'));
       setTerminalModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -213,7 +219,7 @@ export const MawbList: React.FC = () => {
       await operationApi.updateMawb(selectedMawb.id, payload);
       message.success(t('common.success'));
       setTrackingModalOpen(false);
-      fetchData();
+      dispatchMawbUpdate();
     } catch {
       message.error(t('common.error'));
     }
@@ -231,7 +237,7 @@ export const MawbList: React.FC = () => {
       message.success('Manifest uploaded');
       setManifestModalOpen(false);
       setManifestTarget(null);
-      fetchData();
+      dispatchMawbUpdate();
     } catch { message.error('Upload failed'); }
     return false;
   };
@@ -247,7 +253,7 @@ export const MawbList: React.FC = () => {
       message.success('Draft MAWB uploaded');
       setDraftModalOpen(false);
       setDraftTarget(null);
-      fetchData();
+      dispatchMawbUpdate();
     } catch { message.error('Upload failed'); }
     return false;
   };
@@ -261,7 +267,7 @@ export const MawbList: React.FC = () => {
         try {
           await operationApi.closeMawb(mawb.id);
           message.success('MAWB closed, transferred to Finance');
-          fetchData();
+          dispatchMawbUpdate();
         } catch {
           message.error(t('common.error'));
         }
@@ -344,8 +350,8 @@ export const MawbList: React.FC = () => {
         <div className="flex flex-col">
           <div className="flex items-center gap-1">
             <span className="text-sm font-mono font-bold text-blue-600 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }}>{r.mawbNo}</span>
-            <Tooltip title={t('operation.viewTrackingInternal')}><Search size={11} className="text-slate-300 hover:text-blue-500 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }} /></Tooltip>
-            <Tooltip title={t('operation.manualQuery')}><ExternalLink size={11} className="text-slate-300 hover:text-blue-500 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')} /></Tooltip>
+            <Tooltip title={t('operation.viewTrackingInternal')}><Search size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => { setSelectedMawb(r); setDrawerOpen(true); }} /></Tooltip>
+            <Tooltip title={t('operation.manualQuery')}><ExternalLink size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')} /></Tooltip>
           </div>
           <span className="text-[10px] text-slate-400">{r.carrier || '--'}</span>
         </div>
@@ -984,7 +990,7 @@ export const MawbList: React.FC = () => {
             <Divider orientation="left" className="text-blue-600 font-bold">
               <Space><Activity size={16} /> 17TRACK {t('operation.tracking')}</Space>
             </Divider>
-            <MawbTrackingTable mawbNo={selectedMawb.mawbNo} />
+            <MawbTrackingTable mawbNo={selectedMawb.mawbNo} onTrackingUpdate={dispatchMawbUpdate} />
           </div>
         )}
       </Drawer>

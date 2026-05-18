@@ -3,6 +3,7 @@ import { Tabs, Card, Typography, Row, Col, Statistic } from 'antd';
 import { Coins, Globe, Briefcase, Users, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { PricingList } from './PricingList';
 import { BookingList } from './BookingList';
 import { QuotationHistory } from './QuotationHistory';
@@ -12,6 +13,7 @@ import { businessApi } from '../../services/api';
 const { Title, Text } = Typography;
 
 export const BusinessModule: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('rates');
   const [stats, setStats] = useState({ totalRevenue: 0, activeQuotes: 0, confirmedBookings: 0, crmClients: 0 });
   const location = useLocation();
@@ -100,7 +102,7 @@ export const BusinessModule: React.FC = () => {
               ),
               children: <BookingList />
             },
-            {
+            ...(['admin', 'business'].includes(user?.role || '') ? [{
                key: 'crm',
                label: (
                  <div className="flex items-center gap-2 px-4 py-2">
@@ -108,7 +110,7 @@ export const BusinessModule: React.FC = () => {
                  </div>
                ),
                children: <CustomerList />
-            }
+            }] : []),
           ]}
         />
       </Card>

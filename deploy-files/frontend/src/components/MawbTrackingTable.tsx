@@ -18,9 +18,10 @@ interface TrackLog {
 
 interface MawbTrackingTableProps {
   mawbNo: string;
+  onTrackingUpdate?: () => void;
 }
 
-const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
+const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo, onTrackingUpdate }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [trackLogs, setTrackLogs] = useState<TrackLog[]>([]);
@@ -96,6 +97,7 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
           }));
           setTrackLogs(mapped);
           setError(null);
+          onTrackingUpdate?.();
         } else {
           const awbInfo = item.track_info?.shipment?.awb_info || {};
           const latestStatus = item.track_info?.shipment?.latest_status?.status || awbInfo.status || '';
@@ -105,6 +107,7 @@ const MawbTrackingTable: React.FC<MawbTrackingTableProps> = ({ mawbNo }) => {
             setError("The shipment has been registered successfully, but 17TRACK hasn't received detailed logs from the carrier yet. Please try again in 5-10 minutes.");
           }
           setTrackLogs([]);
+          onTrackingUpdate?.();
         }
       } else if (result.data?.rejected && Array.isArray(result.data.rejected) && result.data.rejected.length > 0) {
         const reject = result.data.rejected[0];

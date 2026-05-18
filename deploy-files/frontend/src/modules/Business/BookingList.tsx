@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, App, Tag, Row, Col, DatePicker, Card, Typography, Divider, Drawer, Statistic, Badge, Upload, Tooltip, Alert } from 'antd';
 import { Customer, FlightRate, Booking, BookingStatus, MawbStatus, MAWB } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding, AlertCircle } from 'lucide-react';
+import { FilePlus, Package, Printer, ExternalLink, FileText, Info, PlaneTakeoff, PlaneLanding, AlertCircle, Search } from 'lucide-react';
 import dayjs from 'dayjs';
 import { PDFService } from '../../services/PDFService';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +68,15 @@ export const BookingList: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Listen for MAWB status updates from Operation center
+  useEffect(() => {
+    const handler = () => {
+      operationApi.getMawbs().then(r => setMawbs(r.data)).catch(() => {});
+    };
+    window.addEventListener('mawb-status-updated', handler);
+    return () => window.removeEventListener('mawb-status-updated', handler);
+  }, []);
 
   const handleCreate = async (values: any) => {
     const rate = rates.find(r => r.id === values.rateId);
@@ -163,8 +172,12 @@ export const BookingList: React.FC = () => {
                 <span className="text-sm font-mono font-bold text-blue-600">{r.bookingNo}</span>
                 <span className="text-[10px] text-slate-500">{dayjs(r.createdAt).format('YYYY-MM-DD')}</span>
                 {r.mawbNo && (
-                  <span className="text-[10px] font-mono text-blue-500 mt-0.5 flex items-center gap-1" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }}>
-                    {r.mawbNo} <ExternalLink size={10} />
+                  <span className="flex items-center gap-1 mt-0.5" onClick={e => e.stopPropagation()}>
+                    <span className="text-[10px] font-mono font-bold text-blue-600 cursor-pointer" onClick={() => window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank')}>
+                      {r.mawbNo}
+                    </span>
+                    <Tooltip title={t('operation.viewTrackingInternal')}><Search size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" /></Tooltip>
+                    <Tooltip title={t('operation.manualQuery')}><ExternalLink size={22} className="text-orange-500 hover:text-orange-600 border border-orange-300 rounded p-0.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); window.open(`https://t.17track.net/zh-cn?nums=${r.mawbNo}`, '_blank'); }} /></Tooltip>
                   </span>
                 )}
               </div>
@@ -276,7 +289,10 @@ export const BookingList: React.FC = () => {
             ],
             onFilter: (value: any, r: Booking) => r.status === value,
             sorter: (a: Booking, b: Booking) => (a.status || '').localeCompare(b.status || ''),
-            render: (r: Booking) => getStatusTag(r.status)
+            render: (r: Booking) => {
+              const mawbB = mawbs.find(m => m.mawbNo === r.mawbNo || m.mawbNo?.trim() === r.mawbNo?.trim());
+              return getStatusTag(mawbB?.status || r.status);
+            }
           },
           {
             title: t('common.actions'),
@@ -363,7 +379,7 @@ export const BookingList: React.FC = () => {
             <Card size="small" className="bg-slate-50">
               <Row gutter={[16, 16]}>
                 <Col span={12}><Text type="secondary">Customer:</Text> <div className="font-bold">{customers.find(c => c.id === selectedBookingDetail.customerId)?.name || selectedBookingDetail.customerName || '--'}</div></Col>
-                <Col span={12}><Text type="secondary">{t('common.status')}:</Text> <Tag>{t(`booking.status.${selectedBookingDetail.status}`)}</Tag></Col>
+                <Col span={12}><Text type="secondary">{t('common.status')}:</Text> {getStatusTag(selectedBookingDetail.status)}</Col>
                 <Col span={12}><Text type="secondary">Route:</Text> <div className="flex flex-col"><span className="font-bold">{selectedBookingDetail.origin} → {selectedBookingDetail.destination}</span><span className="text-[10px] text-slate-400">{selectedBookingDetail.flightDate ? dayjs(selectedBookingDetail.flightDate).format('YYYY-MM-DD') : '--'} / {selectedBookingDetail.carrier || '--'}</span></div></Col>
                 <Col span={12}><Text type="secondary">MAWB:</Text> <span className="font-mono font-bold text-blue-600">{selectedBookingDetail.mawbNo || '--'}</span></Col>
                 <Col span={12}><Text type="secondary">{t('common.user')}:</Text> <div className="font-bold text-indigo-600">{(profile as any)?.contactPerson || (profile as any)?.name || '--'}</div></Col>
