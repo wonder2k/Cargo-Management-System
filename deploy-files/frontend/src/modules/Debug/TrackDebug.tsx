@@ -78,7 +78,7 @@ export const TrackDebug: React.FC = () => {
       const infoData = await infoRes.json();
 
       setLogs(prev => prev.map((log, idx) =>
-        idx === 1 ? { ...log, response: infoData, status: infoRes.ok ? 'success' : 'error' } : log
+        idx === 0 ? { ...log, response: infoData, status: infoRes.ok ? 'success' : 'error' } : log
       ));
 
       if (regData.code === 0 || regData.code === -18019901 || regData.code === -18019603) {

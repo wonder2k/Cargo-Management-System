@@ -95,6 +95,46 @@ app.post('/api/track/gettrackinfo', async (req, res) => {
     let data;
     try { data = JSON.parse(text); } catch { return res.status(500).json({ error: 'Non-JSON response', details: text.slice(0, 500) }); }
     if (!response.ok) return res.status(response.status).json(data);
+
+    // Sync MAWB status from AWB tracking data
+    try {
+      const accepted = data?.data?.accepted;
+      if (accepted && accepted.length > 0) {
+        const item = accepted[0];
+        const shipment = item.track_info?.shipment || {};
+        const latestStatus = shipment.latest_status?.status || '';
+        const awbInfo = shipment.awb_info || {};
+
+        if (latestStatus || awbInfo.origin_iata || awbInfo.destination_iata) {
+          const update: any = { lastActivity: new Date().toISOString() };
+
+          // Update origin/destination if available
+          if (awbInfo.origin_iata) update.origin = awbInfo.origin_iata;
+          if (awbInfo.destination_iata) update.destination = awbInfo.destination_iata;
+
+          // Update MAWB status based on 17track status
+          if (latestStatus === 'Arrived' || latestStatus === 'Delivered') {
+            update.status = 'arrived';
+          } else if (latestStatus === 'InTransit' || latestStatus === 'Departed') {
+            if (update.status !== 'arrived') update.status = 'departed';
+          }
+
+          // Extract flight dates from transport info
+          const transportInfos = shipment.awb_transport_infos || [];
+          if (transportInfos.length > 0) {
+            const firstLeg = transportInfos[0];
+            if (firstLeg.atd && !update.atd) update.atd = new Date(firstLeg.atd).toISOString();
+            if (firstLeg.ata && !update.ata) update.ata = new Date(firstLeg.ata).toISOString();
+          }
+
+          await db.update(mawbs).set(update).where(eq(mawbs.mawbNo, cleanNumber));
+          console.log(`[17TRACK AWB] Synced ${cleanNumber}: status=${update.status || 'unchanged'}`);
+        }
+      }
+    } catch (syncErr: any) {
+      console.error('[17TRACK AWB] Sync error:', syncErr.message);
+    }
+
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
